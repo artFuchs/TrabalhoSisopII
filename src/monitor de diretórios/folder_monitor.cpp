@@ -1,7 +1,8 @@
 #include "folder_monitor.h"
 using namespace std;
 
-void read_dir(string path, map<string, STAT_t> &files){
+map<string, STAT_t> read_dir(string path){
+  map<string, STAT_t> files;
   DIR *d;
   struct dirent *dir;
   d = opendir(path.c_str());
@@ -18,11 +19,12 @@ void read_dir(string path, map<string, STAT_t> &files){
     }
     closedir(d);
   }
+  return files;
 }
 
 
 // check for diferences in the directory
-map<string, FILE_MOD_t> diff_dir(string path, map<string, STAT_t> &files){
+map<string, FILE_MOD_t> diff_dir(string path, map<string, STAT_t> files){
   map<string, FILE_MOD_t> changes; // changes ocurred in the directory
   map<string, bool> in_dir; // which files are in directory
 
@@ -93,7 +95,6 @@ map<string, FILE_MOD_t> diff_dir(string path, map<string, STAT_t> &files){
       FILE_MOD_t deleted;
       deleted.mod = ERASED;
       changes[it->first] = deleted;
-      files.erase(it->first);
     }
   }
 

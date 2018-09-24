@@ -1,11 +1,12 @@
 #include "folder_monitor.h"
 using namespace std;
 
-int main(void) {
-  map<string,STAT_t> files;
+// Exemplo de uso
 
+int main(void) {
+  
   string path = "./dir";
-  read_dir(path, files);
+  map<string,STAT_t> files = read_dir(path);
 
   while (true)
   {
@@ -34,6 +35,9 @@ int main(void) {
             cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
             cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
             files[it->first] = it->second.file_stat;
+          }
+          else{
+            files.erase(it->first);
           }
       }
       cout << endl;

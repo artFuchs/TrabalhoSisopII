@@ -9,7 +9,7 @@
 
 using namespace std;
 
-// structures used
+// estruturas usadas
 enum Modification{ MOVED, MODIFIED, ERASED };
 typedef struct stat STAT_t;
 struct file_mod{
@@ -18,6 +18,21 @@ struct file_mod{
 };
 typedef struct file_mod FILE_MOD_t;
 
-// functions
-void read_dir(string, map<string, STAT_t>&);
-map<string, FILE_MOD_t> diff_dir(string, map<string, STAT_t>&);
+// =============================================================================
+// funções
+
+/* read_dir : lê um diretório, retornando um dicionário contendo os
+              arquivos contidos nele.
+      parâmetros : path - string : caminho do diretório a ser lido.
+      retorno : arquivos do diretório - map<string, STAT_t>
+*/
+map<string, STAT_t>read_dir(string);
+
+/* diff_dir : examina um diretório, retornando modificações que nele ocorram
+      parâmetros : path - string : caminho do diretório a ser lido
+                   files - map <string, STAT_t : dicionário contendo os arquivos
+                           já lidos do diretório, necessário para examinar as
+                           diferenças.
+      retorno : mudanças encontradas nos arquivos - map<string, FILE_MOD_t>
+*/
+map<string, FILE_MOD_t> diff_dir(string, map<string, STAT_t>);
