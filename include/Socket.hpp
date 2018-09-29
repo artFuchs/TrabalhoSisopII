@@ -1,6 +1,9 @@
 #pragma once
 
 #include <exception>
+#include <memory>
+#include <thread>
+#include <mutex>
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -15,8 +18,9 @@
 
 namespace dropbox{
 
+// We probably send just the buffer, not the entire Packet; we could change packetLen to bufferLen
 struct Packet{
-    int packetLen;
+    int bufferLen;
     char buffer[256];
 };
 
@@ -28,18 +32,20 @@ struct Packet{
 /// obtain the pointer of the message with buffer()
 ///
 class UDPSocket{
+
 private:
     int _sockfd;
     socklen_t _serverLen, _clientLen;
     struct sockaddr_in _serverAddr, _clientAddr;
     Packet _buffer;
-    
+    std::mutex _socketMutex;    
+
     bool _valid;
 public:
     UDPSocket(void) = delete;
     UDPSocket(UDPSocket& socket) = delete;
 
-    // Creates a new Socket
+    // Creates a new server Socket that listens to port
     UDPSocket(int port){
         _serverAddr.sin_family = AF_INET;
         _serverAddr.sin_port = htons(port);
@@ -64,14 +70,26 @@ public:
     }
         
     Packet read(void){
+        std::lock_guard<std::mutex> lck(_socketMutex);
+
         if(_valid){
-            _buffer.packetLen = recvfrom(_sockfd, (void*) _buffer.buffer, BUFFER_MAX_SIZE, 0, (struct sockaddr *) &_clientAddr, (socklen_t*) &_clientLen);
+            _buffer.bufferLen = recvfrom(_sockfd, (void*) _buffer.buffer, BUFFER_MAX_SIZE, 0, (struct sockaddr *) &_clientAddr, (socklen_t*) &_clientLen);
             return _buffer;
+        } else{
+           throw std::runtime_error("Socket is not valid");
         }
- 
-       throw std::runtime_error("Socket is not valid");
     }
-        
+ 
+    int send(std::shared_ptr<Packet> packet, sockaddr_in* sendingAddress){
+        std::lock_guard<std::mutex> lck(_socketMutex);
+
+        if(_valid){
+            return sendto(_sockfd, packet->buffer, packet->bufferLen, 0, (sockaddr *) sendingAddress, sizeof(sockaddr)); 
+        } else{
+           throw std::runtime_error("Socket is not valid");
+        }
+    }
+       
     std::string getClientAddressString(void){
         return std::string(std::to_string(_clientAddr.sin_addr.s_addr) + ":" + std::to_string(_clientAddr.sin_port));
     }

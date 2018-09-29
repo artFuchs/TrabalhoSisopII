@@ -20,7 +20,7 @@ void Server::run(void){
             *packet = _listenSocket.read();
 
             // If there was a problem while reading, it shuts down the connection
-            if(packet->packetLen < 0){
+            if(packet->bufferLen < 0){
                 std::cout << "Error while trying to read from socket" << std::endl;
                 break;
             }
@@ -31,7 +31,7 @@ void Server::run(void){
             // Checks if there is a ServerSession for the client that has sent the message
             if(it == _serverSessions.end()){
                 std::cout << "NEW SESSION" << std::endl;
-                std::shared_ptr<ServerSession> newSession(new ServerSession(_listenSocket.getClientAddress()));
+                std::shared_ptr<ServerSession> newSession(new ServerSession(_listenSocket, _listenSocket.getClientAddress()));
                 _serverSessions.insert(std::make_pair(clientAddress, newSession));
                 it = _serverSessions.find(clientAddress);
             }
@@ -53,4 +53,5 @@ void Server::stop(void){
 }
 
 }
+
 

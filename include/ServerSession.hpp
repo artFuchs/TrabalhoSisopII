@@ -11,24 +11,26 @@ namespace dropbox{
 ///
 class ServerSession : public Session<true>{
 
-private:
-
 public:
-    ServerSession(sockaddr_in& clientAddress){
+
+    ServerSession(UDPSocket& socket, sockaddr_in& clientAddress) : Session<true>(socket, clientAddress){
     }
 
     void stop(void){
     }
     
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
-        std::string message(packet->buffer, packet->packetLen);
-        std::cout << "Received: " << message << std::endl;
+        std::string message(packet->buffer, packet->bufferLen);
+        std::cout << "Received: " << message << "Sending back the message..." << std::endl;
+        
+        // As this is just a ping, we use the same packet that was sent to the server
+        if(sendMessage(packet) < 0){
+            // We could drop the connection here
+            std::cout << "Error sending a message to the client" << std::endl;
+        } else{
+            std::cout << "Message successfully sent!" << std::endl;
+        }
     }
-
-    void sendMessage(std::shared_ptr<Packet> packet){
-
-    }
-
 
 };
 
