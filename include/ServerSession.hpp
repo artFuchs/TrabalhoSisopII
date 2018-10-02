@@ -13,18 +13,18 @@ class ServerSession : public Session<true>{
 
 public:
 
-    ServerSession(UDPSocket& socket, sockaddr_in& clientAddress) : Session<true>(socket, clientAddress){
+    ServerSession(UDPSocket& socket) : Session<true>(socket){
     }
 
     void stop(void){
     }
     
-    void onSessionReadMessage(std::shared_ptr<Packet> packet){
+    void onSessionReadMessage(std::shared_ptr<Packet> packet) override{
         std::string message(packet->buffer, packet->bufferLen);
         std::cout << "Received: " << message << "Sending back the message..." << std::endl;
         
         // As this is just a ping, we use the same packet that was sent to the server
-        if(sendMessage(packet) < 0){
+        if(sendMessageServer(packet) < 0){
             // We could drop the connection here
             std::cout << "Error sending a message to the client" << std::endl;
         } else{

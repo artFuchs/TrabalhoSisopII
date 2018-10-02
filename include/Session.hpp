@@ -20,22 +20,27 @@ private:
 
 protected:
 
-    int sendMessage(std::shared_ptr<Packet> packet){
+    int sendMessageServer(std::shared_ptr<Packet> packet){
         return _socket.send(packet, &_receiverAddress);
+    }
+
+    int sendMessageClient(std::shared_ptr<Packet> packet){
+        return _socket.send(packet);
     }
 
 public:
 
-    Session(UDPSocket& socket, sockaddr_in& receiverAddress) : _socket(socket){
+    Session(UDPSocket& socket) : _socket(socket){
+    }
+
+    void setReceiverAddress(sockaddr_in& receiverAddress){
         _receiverAddress = receiverAddress;
     }
 
     virtual void onSessionReadMessage(std::shared_ptr<Packet> packet) = 0;
     
-
 };
 
 }
 
-//#include "../src/Session.ipp"
 

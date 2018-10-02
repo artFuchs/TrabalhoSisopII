@@ -31,7 +31,8 @@ void Server::run(void){
             // Checks if there is a ServerSession for the client that has sent the message
             if(it == _serverSessions.end()){
                 std::cout << "NEW SESSION" << std::endl;
-                std::shared_ptr<ServerSession> newSession(new ServerSession(_listenSocket, _listenSocket.getClientAddress()));
+                std::shared_ptr<ServerSession> newSession(new ServerSession(_listenSocket));
+                newSession->setReceiverAddress(_listenSocket.getReadingAddress());
                 _serverSessions.insert(std::make_pair(clientAddress, newSession));
                 it = _serverSessions.find(clientAddress);
             }
