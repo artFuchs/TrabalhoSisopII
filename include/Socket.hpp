@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <string.h>
+#include <vector>
 
 #define BUFFER_MAX_SIZE 256
 
@@ -21,8 +22,11 @@ namespace dropbox{
 
 // We probably send just the buffer, not the entire Packet; we could change packetLen to bufferLen
 struct Packet{
-    int bufferLen;
-    char buffer[256];
+    uint16_t type;
+    uint16_t seqn;
+    uint32_t total_size;
+    uint16_t bufferLen;
+    char buffer[BUFFER_MAX_SIZE];
 };
 
 ///
@@ -40,7 +44,7 @@ private:
     struct sockaddr_in _serverAddr, _readingAddr;
     hostent *_serverHostent; // For Client
     Packet _buffer;
-    std::mutex _socketMutex;    
+    std::mutex _socketMutex;
 
     bool _valid;
 public:
@@ -56,7 +60,7 @@ public:
         bzero(&(_serverAddr.sin_zero), 8);
         _readingLen = sizeof(struct sockaddr_in);
         _valid = false;
-        
+
         if ((_sockfd = socket(AF_INET, SOCK_DGRAM, 0)) != -1){
             int bindReturn = ::bind(_sockfd, (struct sockaddr *) &_serverAddr, sizeof(struct sockaddr));
             if(bindReturn >= 0){
@@ -65,7 +69,7 @@ public:
                 std::cout << "Error " << bindReturn << " while trying to bind the socket" << std::endl;
             }
         } else{
-            std::cout << "Error " << _sockfd << " while trying to create the socket" << std::endl;        
+            std::cout << "Error " << _sockfd << " while trying to create the socket" << std::endl;
         }
     }
 
@@ -85,12 +89,13 @@ public:
         _readingAddr.sin_family = AF_INET;
         _readingAddr.sin_port = htons(port);
         _readingAddr.sin_addr = *((struct in_addr *)_serverHostent->h_addr);
-    	bzero(&(_readingAddr.sin_zero), 8);
+    	  bzero(&(_readingAddr.sin_zero), 8);
+        _valid = true;
     }
-    
+
     ~UDPSocket(void){
     }
-        
+
     // Server
     Packet read(void){
         // Not sure if necessary; also it's causing problems with concurrent reading and sending
@@ -100,7 +105,9 @@ public:
         //std::lock_guard<std::mutex> lck(_socketMutex);
 
         if(_valid){
-            _buffer.bufferLen = recvfrom(_sockfd, (void*) _buffer.buffer, BUFFER_MAX_SIZE, 0, (struct sockaddr *) &_readingAddr, (socklen_t*) &_readingLen);
+            std::vector<char> buff(sizeof(Packet));
+            recvfrom(_sockfd, (void*) &buff[0], sizeof(Packet), 0, (struct sockaddr *) &_readingAddr, (socklen_t*) &_readingLen);
+            memcpy(&_buffer, &buff[0], sizeof(Packet));
             return _buffer;
         } else{
            throw std::runtime_error("Socket is not valid");
@@ -116,13 +123,15 @@ public:
         //std::lock_guard<std::mutex> lck(_socketMutex);
 
         if(_valid){
-            _buffer.bufferLen = recvfrom(_sockfd, (void*) _buffer.buffer, BUFFER_MAX_SIZE, 0, (struct sockaddr *) readingAddr, (socklen_t*) &_readingLen);
+            std::vector<char> buff(sizeof(Packet));
+            recvfrom(_sockfd, (void*) &buff[0], sizeof(Packet), 0, (struct sockaddr *) readingAddr, (socklen_t*) &_readingLen);
+            memcpy(&_buffer, &buff[0], sizeof(Packet));
             return _buffer;
         } else{
            throw std::runtime_error("Socket is not valid");
         }
     }
- 
+
     // Server
     int send(std::shared_ptr<Packet> packet, sockaddr_in* sendingAddress){
         // Not sure if necessary; also it's causing problems with concurrent reading and sending
@@ -132,7 +141,8 @@ public:
         //std::lock_guard<std::mutex> lck(_socketMutex);
 
         if(_valid){
-            return sendto(_sockfd, packet->buffer, packet->bufferLen, 0, (sockaddr *) sendingAddress, sizeof(sockaddr)); 
+            char * b = reinterpret_cast<char*> (packet.get());
+            return sendto(_sockfd, b, sizeof(Packet), 0, (sockaddr *) sendingAddress, sizeof(sockaddr));
         } else{
            throw std::runtime_error("Socket is not valid");
         }
@@ -147,7 +157,8 @@ public:
         //std::lock_guard<std::mutex> lck(_socketMutex);
 
         if(_valid){
-            return sendto(_sockfd, packet->buffer, packet->bufferLen, 0, (sockaddr *) &_readingAddr, sizeof(sockaddr));
+            char * b = reinterpret_cast<char*>(packet.get());
+            return sendto(_sockfd, b, sizeof(Packet), 0, (sockaddr *) &_readingAddr, sizeof(sockaddr));
         } else{
             std::cout << "ERROR" << std::endl;
             throw std::runtime_error("Socket is not valid");
