@@ -19,8 +19,7 @@ private:
 
 public:
 
-    Client(const char* hostname, int port);
-
+    Client(const char* username, const char* hostname, int port);
 
     void stop(void);
 

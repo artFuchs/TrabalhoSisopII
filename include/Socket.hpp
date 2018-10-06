@@ -17,24 +17,51 @@
 #include <vector>
 
 #define BUFFER_MAX_SIZE 256
+#define FILENAME_MAX_SIZE   256
 
 namespace dropbox{
 
-// We probably send just the buffer, not the entire Packet; we could change packetLen to bufferLen
+namespace PacketType{
+    enum E{
+        ACK,
+        DATA,
+        LOGIN
+    };
+
+    static constexpr const char* str[] = {
+        "ACK",
+        "DATA",
+        "LOGIN"
+    };
+
+}
+
+///
+/// \brief The Packet struct contains the data that is sent between
+/// clients through the server
+///
 struct Packet{
-    uint16_t type;
-    uint16_t seqn;
-    uint32_t total_size;
+    // Defines what the Packet contains
+    PacketType::E type;
+    // Incremented after each message; the side that receives a packet with a given
+    // packetNum p must send an Packet ACK whose packetNum is p
+    uint32_t packetNum;          
+    // The first fragment is always zero; independent of packetNum
+    uint32_t fragmentNum;
+    // Number of fragments the file was divided in
+    uint32_t totalFragments;
+    // Size of this particular Packet's data
     uint16_t bufferLen;
+    // Size of this particular Packet's filename
+    uint16_t pathLen;
+
+    // Data itself
     char buffer[BUFFER_MAX_SIZE];
+    char filename[FILENAME_MAX_SIZE];
 };
 
 ///
 /// \brief UDPSocket contains every information related to a UDP socket.
-/// After creating an object of this class, one must call bind().
-/// To read from it, one must first call read() and make sure that the
-/// length of the message is greater than zero. After that, you can
-/// obtain the pointer of the message with buffer()
 ///
 class UDPSocket{
 
