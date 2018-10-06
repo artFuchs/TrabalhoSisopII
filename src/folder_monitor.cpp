@@ -1,5 +1,22 @@
-#include "folder_monitor.h"
+#include "folder_monitor.hpp"
 using namespace std;
+
+namespace dropbox{
+
+int check_dir(string path){
+    int err = -1;
+    DIR *d;
+    d = opendir(path.c_str());
+    if (d){
+        err = 0;
+    }
+    else
+    {
+        err = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    }
+    return err;
+}
+
 
 map<string, STAT_t> read_dir(string path){
   map<string, STAT_t> files;
@@ -99,4 +116,5 @@ map<string, FILE_MOD_t> diff_dir(string path, map<string, STAT_t> files){
   }
 
   return changes;
+}
 }

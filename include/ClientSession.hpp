@@ -19,7 +19,7 @@ private:
 
     std::thread _sendingThread;
     std::mutex _modifyingDirectory;
-    uint32_t _packetNum;                    
+    uint32_t _packetNum;
     bool _running;
 
 public:
@@ -41,7 +41,7 @@ public:
         _packetNum++;
         packet->bufferLen = message.size();
         memcpy(static_cast<void*>(packet->buffer), static_cast<const void*>(message.c_str()), message.size());
-        
+
         try{
         bool messageSent = false;
         while(not messageSent){
@@ -50,11 +50,11 @@ public:
             if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
 
             // Waits for an ack
-            messageSent = waitAck(packet->packetNum);    
+            messageSent = waitAck(packet->packetNum);
             }
         } catch(std::exception& e){
             std::cout << e.what() << std::endl;
-        }
+        }           
 
         std::cout << "Session connected!" << std::endl;
     }
@@ -62,7 +62,7 @@ public:
     void start(void){
         _running = true;
 
-        _sendingThread = std::thread([&] { 
+        _sendingThread = std::thread([&] {
             while(_running){
                 //std::string message = "ping";
                 //std::shared_ptr<Packet> packet(new Packet);
@@ -95,9 +95,9 @@ public:
         Session<false>::onSessionReadMessage(packet);    // Handles ACK
 
         if(packet->type == PacketType::DATA){
-            
+
         } else{
-            //std::cout << "ACK received" << std::endl;
+            std::cout << "ACK received" << std::endl;
         }
     }
 

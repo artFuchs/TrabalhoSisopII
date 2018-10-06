@@ -2,15 +2,15 @@
 #include <exception>
 
 #include "Client.hpp"
+#include "folder_monitor.hpp"
 
 namespace dropbox{
 
 Client::Client(const char* username, const char* hostname, int port) : _listenSocket(hostname, port), _clientSession(_listenSocket){
     _running = true;
     _connected = false;
-    
+
     _clientSession.setReceiverAddress(_listenSocket.getReadingAddress());
-    _clientSession.start();
     _listeningThread = std::thread([&] {
         while(_running){
             std::shared_ptr<Packet> packet(new Packet);
@@ -33,6 +33,58 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
     });
 
     _clientSession.connect(username);   // We need to be receiving messages before attempting to connect
+
+    _monitoringThread = std::thread([&]{
+        std::string dir_name = std::string("./sync_") + std::string(username);
+        int err = check_dir(dir_name);
+
+        if (err < 0)
+        {
+            throw std::runtime_error("couldn't find nor create sync directory ");
+        }
+        else
+        {
+            map<string,STAT_t> files = read_dir(dir_name);
+
+            while(_running){
+                map<string, FILE_MOD_t> m;
+                m = diff_dir(dir_name,files);
+                if (!m.empty())
+                {
+                    cout << "CHANGES!" << endl;
+                    for (auto it = m.begin(); it!=m.end(); it++)
+                    {
+                        cout << it->first;
+                        switch (it->second.mod){
+                        case MOVED:
+                            cout << " moved/created" << endl;
+                            break;
+                        case MODIFIED:
+                            cout << " modified" << endl;
+                            break;
+                        case ERASED:
+                            cout << " erased" << endl;
+                            break;
+                        }
+                        if (it->second.mod!=ERASED){
+                            cout << "\t tamanho: " << it->second.file_stat.st_size << endl;
+                            cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
+                            cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
+                            cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
+                            files[it->first] = it->second.file_stat;
+                        }
+                        else{
+                            files.erase(it->first);
+                        }
+                    }
+                    cout << endl;
+                    sleep(3);
+                }
+            }
+        }
+    });
+
+    _clientSession.start();
 }
 
 void Client::start(void){
@@ -44,6 +96,9 @@ void Client::stop(void){
 
     if(_listeningThread.joinable()){
         _listeningThread.join();
+    }
+    if(_monitoringThread.joinable()){
+        _monitoringThread.join();
     }
 }
 

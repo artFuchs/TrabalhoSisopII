@@ -14,6 +14,7 @@ private:
     UDPSocket _listenSocket;
     ClientSession _clientSession;
     std::thread _listeningThread;
+    std::thread _monitoringThread; // thread that will monitor the folder;
     bool _running;
     bool _connected;
 
@@ -28,4 +29,3 @@ public:
 };
 
 }
-

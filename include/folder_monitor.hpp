@@ -9,6 +9,8 @@
 
 using namespace std;
 
+namespace dropbox{
+
 // estruturas usadas
 enum Modification{ MOVED, MODIFIED, ERASED };
 typedef struct stat STAT_t;
@@ -20,6 +22,17 @@ typedef struct file_mod FILE_MOD_t;
 
 // =============================================================================
 // funções
+
+/* check_dir : verifica se um diretório existe.
+                se o diretório não existir, cria ele.
+        parâmetros : path - string : caminho do diretório
+        retorno : -1 - erro
+                  0 - diretório existe
+                  1 - diretório foi criado
+        */
+int check_dir(string);
+
+
 
 /* read_dir : lê um diretório, retornando um dicionário contendo os
               arquivos contidos nele.
@@ -36,3 +49,5 @@ map<string, STAT_t>read_dir(string);
       retorno : mudanças encontradas nos arquivos - map<string, FILE_MOD_t>
 */
 map<string, FILE_MOD_t> diff_dir(string, map<string, STAT_t>);
+
+}
