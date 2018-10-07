@@ -13,7 +13,7 @@ INCLUDE_FLAG=-I./include
 ALL_OBJS=${wildcard ${BIN_DIR}/*.o}
 
 SERVER_OBJS=${BIN_DIR}/mainServer.o ${BIN_DIR}/server.o
-CLIENT_OBJS=${BIN_DIR}/mainClient.o ${BIN_DIR}/client.o ${BIN_DIR}/folder_monitor.o
+CLIENT_OBJS=${BIN_DIR}/mainClient.o ${BIN_DIR}/client.o ${BIN_DIR}/fileMonitor.o
 
 #############################################################
 
@@ -54,8 +54,8 @@ ${BIN_DIR}/server.o: ${SRC_DIR}/Server.cpp
 ${BIN_DIR}/client.o: ${SRC_DIR}/Client.cpp
 	g++ -c ${SRC_DIR}/Client.cpp -o ${BIN_DIR}/client.o ${CXXFLAGS} ${INCLUDE_FLAG}
 
-${BIN_DIR}/folder_monitor.o: ${SRC_DIR}/Client.cpp
-	g++ -c ${SRC_DIR}/folder_monitor.cpp -o ${BIN_DIR}/folder_monitor.o ${CXXFLAGS} ${INCLUDE_FLAG}
+${BIN_DIR}/fileMonitor.o: ${SRC_DIR}/Client.cpp
+	g++ -c ${SRC_DIR}/FileMonitor.cpp -o ${BIN_DIR}/fileMonitor.o ${CXXFLAGS} ${INCLUDE_FLAG}
 
 #############################################################
 

@@ -2,7 +2,7 @@
 #include <exception>
 
 #include "Client.hpp"
-#include "folder_monitor.hpp"
+#include "FileMonitor.hpp"
 
 namespace dropbox{
 
@@ -36,19 +36,16 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
 
     _monitoringThread = std::thread([&]{
         std::string dir_name = std::string("./sync_") + std::string(username);
-        int err = check_dir(dir_name);
-
-        if (err < 0)
+        FileMonitor fm(dir_name);
+        if (!fm.is_valid())
         {
             throw std::runtime_error("couldn't find nor create sync directory ");
         }
         else
         {
-            map<string,STAT_t> files = read_dir(dir_name);
-
             while(_running){
                 map<string, FILE_MOD_t> m;
-                m = diff_dir(dir_name,files);
+                m = fm.diff_dir();
                 if (!m.empty())
                 {
                     cout << "CHANGES!" << endl;
@@ -71,10 +68,6 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
                             cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
                             cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
                             cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
-                            files[it->first] = it->second.file_stat;
-                        }
-                        else{
-                            files.erase(it->first);
                         }
                     }
                     cout << endl;
