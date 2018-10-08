@@ -71,8 +71,8 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
                         }
                     }
                     cout << endl;
-                    sleep(3);
                 }
+                sleep(3);
             }
         }
     });

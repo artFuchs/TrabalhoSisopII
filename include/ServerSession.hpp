@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "Session.hpp"
+#include "FileManager.hpp"
 
 namespace dropbox{
 
@@ -13,6 +14,7 @@ class ServerSession : public Session<true>{
 private:
     bool _loggedIn;
     uint32_t _packetNum;
+    FileManager fileMgr;
 
 public:
 
@@ -23,14 +25,14 @@ public:
 
     void stop(void){
     }
-    
+
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet);    // Handles ACK
 
         if(packet->type == PacketType::DATA){
             std::string message(packet->buffer, packet->bufferLen);
             std::cout << "Received: " << message << "Sending back the message..." << std::endl;
-            
+
             // As this is just a ping, we use the same packet that was sent to the server
             packet->packetNum = _packetNum;
             if(sendMessageServer(packet) < 0){
@@ -44,9 +46,24 @@ public:
         } else if(packet->type == PacketType::LOGIN){
             _loggedIn = true;
 
-            // TODO: create a login return message
-            //sendMessageServer();
-            //std::cout << "Login return sent!" << std::endl;
+            std::string directory = std::string("./") + std::string(packet->buffer);
+            fileMgr.check_dir(directory);
+            if (!fileMgr.is_valid()){
+                // TODO: create a login return message
+                //sendMessageServer();
+                //std::cout << "Login return sent!" << std::endl;
+
+                map<string, STAT_t> files;
+                files = fileMgr.read_dir();
+                if (!files.empty())
+                {
+                    // TODO: send the files to the client
+                }
+            }
+            else {
+                std::cout << "Error opening/creating the user directory " << directory << std::endl;
+            }
+
         } else if(packet->type == PacketType::ACK){
             std::cout << "Received an ACK!" << std::endl;
         }

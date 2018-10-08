@@ -24,7 +24,7 @@ void Server::run(void){
                 std::cout << "Error while trying to read from socket" << std::endl;
                 break;
             }
-            
+
             std::string clientAddress = _listenSocket.getClientAddressString();
             auto it = _serverSessions.find(clientAddress);
 
@@ -38,7 +38,7 @@ void Server::run(void){
             }
 
             it->second->onSessionReadMessage(packet);
-        }        
+        }
     }
     );
 }
@@ -54,5 +54,3 @@ void Server::stop(void){
 }
 
 }
-
-
