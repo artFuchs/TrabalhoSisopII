@@ -12,9 +12,10 @@ int main(void){
     client.start();
 
     std::cin >> dummy;
+    //client.upload("alo.txt");
+  //  client.download("alo.txt");
 
     client.stop();
 
     return 0;
 }
-

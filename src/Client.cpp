@@ -81,6 +81,7 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
 }
 
 void Client::start(void){
+
 }
 
 void Client::stop(void){
@@ -93,6 +94,14 @@ void Client::stop(void){
     if(_monitoringThread.joinable()){
         _monitoringThread.join();
     }
+}
+
+void Client::upload(char filename[FILENAME_MAX_SIZE]){
+  _clientSession.uploadFile(filename);
+}
+
+void Client::download(char filename[FILENAME_MAX_SIZE]){
+  _clientSession.requestDownload(filename);;
 }
 
 

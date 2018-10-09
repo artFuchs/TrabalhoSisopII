@@ -26,6 +26,10 @@ public:
 
     void start(void);
 
+    void upload(char filename[FILENAME_MAX_SIZE]);
+
+    void download(char filename[FILENAME_MAX_SIZE]);
+
 };
 
 }

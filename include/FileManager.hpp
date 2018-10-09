@@ -37,6 +37,10 @@ public:
     */
     void check_dir(string);
 
+    string getPath(){
+      return path;
+    }
+
     /*
         is_valid: informa se o FileMonitor foi iniciado corretamente
             retorno: valid - bool : se é valido (true) ou não (false)

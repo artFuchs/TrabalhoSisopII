@@ -1,9 +1,12 @@
 #pragma once
 
 #include <memory>
-
+#include <math.h>
+#include <stdio.h>
+#include <cstring>
 #include "Session.hpp"
 #include "FileManager.hpp"
+#define BUFFER_MAX_SIZE 256
 
 namespace dropbox{
 
@@ -32,23 +35,15 @@ public:
         if(packet->type == PacketType::DATA){
             std::string message(packet->buffer, packet->bufferLen);
             std::cout << "Received: " << message << "Sending back the message..." << std::endl;
+            receiveFile(packet);
+            _packetNum++;
 
-            // As this is just a ping, we use the same packet that was sent to the server
-            packet->packetNum = _packetNum;
-            if(sendMessageServer(packet) < 0){
-                // We could drop the connection here
-                std::cout << "Error sending a message to the client" << std::endl;
-            } else{
-                waitAck(packet->packetNum);
-                std::cout << "Message successfully sent!" << std::endl;
-                _packetNum++;
-            }
         } else if(packet->type == PacketType::LOGIN){
             _loggedIn = true;
 
             std::string directory = std::string("./") + std::string(packet->buffer);
             fileMgr.check_dir(directory);
-            if (!fileMgr.is_valid()){
+            if (fileMgr.is_valid()){
                 // TODO: create a login return message
                 //sendMessageServer();
                 //std::cout << "Login return sent!" << std::endl;
@@ -66,8 +61,82 @@ public:
 
         } else if(packet->type == PacketType::ACK){
             std::cout << "Received an ACK!" << std::endl;
+        } else if(packet->type == PacketType::DOWNLOAD){
+          sendFile(packet->filename);
         }
     }
+
+    string buildFullPath(char filename[FILENAME_MAX_SIZE]){
+      string fullPath (fileMgr.getPath());
+      fullPath += "/";
+      fullPath += filename;
+      return fullPath;
+    }
+
+    void receiveFile(std::shared_ptr<Packet> packet){
+      string fullPath = buildFullPath(packet->filename);
+
+      std::string message(packet->buffer, packet->bufferLen);
+
+      ofstream f;
+      if (packet->fragmentNum == 0)
+        f.open(fullPath);
+      else
+        f.open(fullPath, fstream::app);
+
+      f << message;
+      f.close();
+    }
+
+    bool sendFile(char filename[FILENAME_MAX_SIZE]){
+      bool readFile = false;
+      char buffer[BUFFER_MAX_SIZE];
+      string fullPath = buildFullPath(filename);
+      FILE * file = fopen(fullPath.c_str(), "r");
+      int currentFragment = 0;
+
+      //check if file exists
+      if (!file){
+        std::cout << "No such file\n";
+        return false;
+      }
+      //get size
+      fseek(file, 0, SEEK_END);
+      int size = ftell(file);
+      fseek(file, 0, SEEK_SET);
+
+      double nFragments = double(size)/double(BUFFER_MAX_SIZE);
+      int ceiledFragments = ceil(nFragments);
+
+      while(!readFile){
+        int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+        if (amountRead > 0){
+          bool ack = false;
+          std::shared_ptr<Packet> packet(new Packet);
+          packet->type = PacketType::DATA;
+          packet->packetNum = _packetNum;
+          packet->fragmentNum = currentFragment;
+          packet->totalFragments = ceiledFragments;
+          packet->bufferLen = amountRead;
+          packet->pathLen = strlen(filename);
+          strcpy(packet->buffer, buffer);
+          strcpy(packet->filename, filename);
+          while(!ack){
+            int preturn = sendMessageServer(packet);
+            if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+            ack = waitAck(packet->packetNum);
+          }
+          _packetNum++;
+          currentFragment++;
+        } else {
+          readFile = true;
+        }
+
+      }
+      return true;
+    }
+
+
 };
 
 }

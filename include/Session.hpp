@@ -23,6 +23,7 @@ private:
     bool checkAck(uint32_t packetNum){
         for(auto it = _receivedAcks.begin(); it != _receivedAcks.end(); it++){
             if(*it == packetNum){
+              std::cout << *it << "\n";
                 _receivedAcks.erase(it);
                 return true;
             }
@@ -41,10 +42,9 @@ protected:
         while((not receivedAck) and (totalSleepTime > std::chrono::milliseconds(0))){
             std::this_thread::sleep_for(sleepTime);
             totalSleepTime -= sleepTime;
-
             receivedAck = checkAck(packetNum);
         }
-        
+
         return receivedAck;
     }
 
@@ -55,6 +55,8 @@ protected:
     int sendMessageClient(std::shared_ptr<Packet> packet){
         return _socket.send(packet);
     }
+
+
 
 public:
 
@@ -79,9 +81,7 @@ public:
             }
         }
     }
-    
+
 };
 
 }
-
-
