@@ -23,11 +23,13 @@ class FileManager{
 private:
     bool valid;
     map<string, vector<string> > file_pieces;
+    map<string,ifstream> opened_files;
 protected:
     string path; // caminho para o diretório - pode ser relativo
 public:
     FileManager();
     FileManager(string directory);
+    ~FileManager();
 
     /* check_dir : verifica se um diretório existe.
                     se o diretório não existir, cria ele.
@@ -84,10 +86,18 @@ public:
 
     /* delete_file : deleta um arquivo
             parâmetros : name - string : nome do arquivo a ser deletado
-            retorn : int - 0 se obteve sucesso
+            retorno : int - 0 se obteve sucesso
                             <0 c.c.
     */
     int delete_file(string);
+
+    /* read_file : lê n bytes de um arquivo
+            parâmetros : name - string : nome do arquivo a ser lido;
+                         buffer - char* : buffer onde armazenar o arquivo;
+                         n - uint : numero de bytes que devem ser lidos do arquivo.
+            retorno : numero de bytes lidos do arquivo
+    */
+    uint read_file(string, char*, uint);
 };
 
 }

@@ -12,6 +12,27 @@ FileManager::FileManager(string directory) : path(directory){
     check_dir(path);
 }
 
+FileManager::~FileManager(){
+    if (!file_pieces.empty())
+    {
+        // delete all file_pieces
+        for (auto it = file_pieces.begin(); it != file_pieces.end(); it++)
+        {
+            clean_parts(it->first);
+        }
+    }
+
+    if (!opened_files.empty())
+    {
+        // close all opened files
+        for (auto it = opened_files.begin(); it != opened_files.end(); it++)
+        {
+            it->second.close();
+            opened_files.erase(it->first);
+        }
+    }
+}
+
 bool FileManager::is_valid()
 {
     return valid;
@@ -19,6 +40,10 @@ bool FileManager::is_valid()
 
 void FileManager::check_dir(string _path){
     valid = false;
+    if (_path.back() != '/')
+    {
+        _path = _path + "/";
+    }
     path = _path;
     DIR *d;
     d = opendir(path.c_str());
@@ -48,7 +73,7 @@ map<string, STAT_t> FileManager::read_dir(){
             //read the entries of the directory
             if (string(dir->d_name) != "." && string(dir->d_name) != "..") {
                 STAT_t buffer;
-                string fpath = path+"/"+string(dir->d_name);
+                string fpath = path+string(dir->d_name);
                 stat(fpath.c_str(), &buffer);
                 _files[string(dir->d_name)] = buffer;
             }
@@ -60,7 +85,7 @@ map<string, STAT_t> FileManager::read_dir(){
 
 int FileManager::create_file(string name, char contents[]){
     ofstream outFile;
-    string fpath = path+string("/")+name;
+    string fpath = path+name;
     try{
         outFile.open(fpath);
         outFile << contents;
@@ -73,7 +98,7 @@ int FileManager::create_file(string name, char contents[]){
 
 int FileManager::create_file_part(string name, char contents[], int part , int total){
     ofstream outFile;
-    string _path = path+string("/.")+name+to_string(part);
+    string _path = path+string(".")+name+to_string(part);
 
     // if it's the first call, init the file_pieces[name] entry
     if (file_pieces.find(name)==file_pieces.end())
@@ -100,10 +125,10 @@ int FileManager::join_files(string name){
         return -2;
 
     try {
-        file.open(path + "/" + name);
+        file.open(path + name);
         for (uint i=0; i<file_pieces[name].size(); i++)
         {
-            filePart.open(path + "/" + file_pieces[name][i]);
+            filePart.open(path + file_pieces[name][i]);
             string buffer;
             buffer.assign( std::istreambuf_iterator<char>(filePart),
                            std::istreambuf_iterator<char>());
@@ -133,10 +158,30 @@ int FileManager::clean_parts(string name){
 }
 
 int FileManager::delete_file(string name){
-    string filePath(path+"/"+name);
+    string filePath(path+name);
     return remove(filePath.c_str());
 }
 
+uint FileManager::read_file(string name, char* buffer, uint n){
+    //if file is not opened already, open it
+    if (opened_files.find(name)==opened_files.end()){
+        opened_files[name] = ifstream();
+    }
+    
+    ifstream *file = &opened_files[name];
 
+    file->open(path+name);
+    if (file){
+        file->read(buffer, n);
+        uint read = file->gcount();
+        buffer[read] = '\0';
+        if (file->eof()){
+            file->close();
+            opened_files.erase(name);
+        }
+        return read;
+    }
+    return 0;
+}
 
 }
