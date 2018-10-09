@@ -8,8 +8,8 @@
 #include <iostream>
 #include <map>
 #include <string>
-#include <vector>
 #include <fstream>
+#include <vector>
 
 using namespace std;
 
@@ -20,8 +20,9 @@ typedef struct stat STAT_t; // representa um arquivo
 class FileManager{
 private:
     bool valid;
+    map<string, vector<string> > file_pieces;
 protected:
-    string path;
+    string path; // caminho para o diretório - pode ser relativo
 public:
     FileManager();
     FileManager(string directory);
@@ -46,6 +47,45 @@ public:
     */
     map<string, STAT_t> read_dir();
 
+    /* create_file : cria um arquivo
+            parâmetros: name - string : nome do arquivo;
+                        buffer - char[] : conteúdo do arquivo;
+            retorno : int - 0 se não ocorreu erro
+                            <0 se ocorreu erro
+    */
+    int create_file(string, char[]);
+
+    /* create_file_part : cria um arquivo que é parte de outro arquivo
+            parâmetros: name - string : nome da parte do arquivo;
+                        buffer - char[] : conteúdo do arquivo;
+                        part - int : qual parte do arquivo está sendo criada;
+                        total - int : total de partes a serem criadas - deve ser chamado na primeira chamada do método para o arquivo
+            retorno : int - 0 se não ocorreu erro
+                           <0 se ocorreu erro
+    */
+    int create_file_part(string, char[], int, int);
+
+    /* join_files : junta diversas partes de um arquivo
+            parâmetros : name - string : nome do arquivo
+            retorno : int - 0 se não ocorreu erro
+                           <0 se ocorreu erro
+    */
+    int join_files(string);
+
+    /* clean_parts : deleta as partes do arquivo que foram criadas
+            parâmetros : name - string : nome do arquivo a que as partes se referem
+            retorno : int - 0 se não ocorreu erro
+                           <0 se ocorreu erro
+
+    */
+    int clean_parts(string);
+
+    /* delete_file : deleta um arquivo
+            parâmetros : name - string : nome do arquivo a ser deletado
+            retorn : int - 0 se obteve sucesso
+                            <0 c.c.
+    */
+    int delete_file(string);
 };
 
 }

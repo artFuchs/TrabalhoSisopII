@@ -58,5 +58,74 @@ map<string, STAT_t> FileManager::read_dir(){
     return _files;
 }
 
+int FileManager::create_file(string name, char contents[]){
+    ofstream outFile;
+    string fpath = path+string("/")+name;
+    try{
+        outFile.open(fpath);
+        outFile << contents;
+        outFile.close();
+    } catch (std::ifstream::failure e){
+        return -1;
+    }
+    return 0;
+}
+
+int FileManager::create_file_part(string name, char contents[], int part , int total){
+    ofstream outFile;
+    string _path = path+string("/.")+name+to_string(part);
+
+    // if it's the first call, init the file_pieces[name] entry
+    if (file_pieces.find(name)==file_pieces.end())
+        file_pieces[name] = vector<string>(total, string());
+
+    try{
+        outFile.open(_path);
+        outFile << contents;
+        outFile.close();
+        file_pieces[name][part] = name + to_string(part);
+    } catch (std::ifstream::failure e){
+        return -1;
+    }
+
+    return 0;
+}
+
+int FileManager::join_files(string name){
+    ifstream filePart;
+    ofstream file;
+
+    //check if the name entry exists in file_pieces
+    if (file_pieces.find(name)==file_pieces.end())
+        return -1;
+
+    try {
+        file.open(path + "/" + name);
+        for (uint i=0; i<file_pieces[name].size(); i++)
+        {
+            filePart.open(path + "/." + file_pieces[name][i]);
+            string buffer;
+            buffer.assign( std::istreambuf_iterator<char>(filePart),
+                           std::istreambuf_iterator<char>());
+            file << buffer;
+            filePart.close();
+        }
+        file.close();
+    } catch (std::ifstream::failure e){
+        return -1;
+    }
+
+    return 0;
+}
+
+int FileManager::clean_parts(string name){
+    //delete all the files and remove the dictionary entry
+    return 0;
+}
+
+int FileManager::delete_file(string name){
+    //delete an file in the directory
+    return 0;
+}
 
 }
