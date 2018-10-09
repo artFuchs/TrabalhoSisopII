@@ -45,13 +45,13 @@ map<string, STAT_t> FileManager::read_dir(){
     d = opendir(path.c_str());
     if (d) {
         while ((dir = readdir(d)) != NULL) {
-          if (string(dir->d_name) != "." && string(dir->d_name) != "..") {
-            STAT_t buffer;
-            string fpath = path+"/"+string(dir->d_name);
-            stat(fpath.c_str(), &buffer);
-            _files[string(dir->d_name)] = buffer;
-            //printf("%s\n", dir->d_name);
-          }
+            //read the entries of the directory
+            if (string(dir->d_name) != "." && string(dir->d_name) != "..") {
+                STAT_t buffer;
+                string fpath = path+"/"+string(dir->d_name);
+                stat(fpath.c_str(), &buffer);
+                _files[string(dir->d_name)] = buffer;
+            }
         }
         closedir(d);
     }
@@ -83,7 +83,7 @@ int FileManager::create_file_part(string name, char contents[], int part , int t
         outFile.open(_path);
         outFile << contents;
         outFile.close();
-        file_pieces[name][part] = name + to_string(part);
+        file_pieces[name][part] = "." + name + to_string(part);
     } catch (std::ifstream::failure e){
         return -1;
     }
@@ -97,13 +97,13 @@ int FileManager::join_files(string name){
 
     //check if the name entry exists in file_pieces
     if (file_pieces.find(name)==file_pieces.end())
-        return -1;
+        return -2;
 
     try {
         file.open(path + "/" + name);
         for (uint i=0; i<file_pieces[name].size(); i++)
         {
-            filePart.open(path + "/." + file_pieces[name][i]);
+            filePart.open(path + "/" + file_pieces[name][i]);
             string buffer;
             buffer.assign( std::istreambuf_iterator<char>(filePart),
                            std::istreambuf_iterator<char>());
@@ -119,13 +119,24 @@ int FileManager::join_files(string name){
 }
 
 int FileManager::clean_parts(string name){
-    //delete all the files and remove the dictionary entry
+    //check if the name entry exists in file_pieces
+    if (file_pieces.find(name)==file_pieces.end())
+        return -2;
+
+    for (auto part_name = file_pieces[name].begin(); part_name!=file_pieces[name].end(); part_name++)
+    {
+        if (delete_file(*part_name)!=0)
+            return -1; // error deleting file
+    }
+    file_pieces.erase(name);
     return 0;
 }
 
 int FileManager::delete_file(string name){
-    //delete an file in the directory
-    return 0;
+    string filePath(path+"/"+name);
+    return remove(filePath.c_str());
 }
+
+
 
 }

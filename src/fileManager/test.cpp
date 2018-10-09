@@ -4,7 +4,7 @@ using namespace std;
 using namespace dropbox;
 int main()
 {
-    FileManager fm("test");
+    FileManager fm("./test");
     if (!fm.is_valid())
         return -1;
     fm.create_file("test1", (char*)"testando a criação de arquivos.");
@@ -16,6 +16,11 @@ int main()
     fm.create_file_part("test2", (char*)"em ", 5, 7);
     fm.create_file_part("test2", (char*)"partes.", 6, 7);
     fm.join_files("test2");
+    int err = fm.clean_parts("test2");
+    if (err != 0)
+    {
+        cout << "error cleanning temporary files: " << err << endl;
+    }
 
     return 0;
 }
