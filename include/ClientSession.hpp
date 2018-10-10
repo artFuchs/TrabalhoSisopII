@@ -62,7 +62,7 @@ public:
         }
 
 
-        fileMgr.check_dir("./sync_" + username);
+        fileMgr.check_dir(string("./sync_") + username);
 
         std::cout << "Session connected!" << std::endl;
     }
@@ -114,18 +114,7 @@ public:
     bool uploadFile(char filename[FILENAME_MAX_SIZE]){
       bool readFile = false;
       char buffer[BUFFER_MAX_SIZE];
-      // FILE * file = fopen(filename, "r");
-      // int currentFragment = 0;
-      //
-      //check if file exists
-      // if (!file){
-      //   std::cout << "No such file\n";
-      //   return false;
-      // }
-      // //get size
-      // fseek(file, 0, SEEK_END);
-      // int size = ftell(file);
-      // fseek(file, 0, SEEK_SET);
+      int currentFragment = 0;
 
       if (!fileMgr.is_valid())
       {
@@ -145,8 +134,8 @@ public:
       double nFragments = double(size)/double(BUFFER_MAX_SIZE);
       int ceiledFragments = ceil(nFragments);
 
-      while(fileMgr.read_file())){
-        int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+      while(!readFile){
+        int amountRead = fileMgr.read_file(filename,buffer,BUFFER_MAX_SIZE);
         if (amountRead > 0){
           bool ack = false;
           std::shared_ptr<Packet> packet(new Packet);
@@ -165,10 +154,10 @@ public:
           }
           _packetNum++;
           currentFragment++;
-        } else {
+        }
+        if (amountRead < BUFFER_MAX_SIZE) {
           readFile = true;
         }
-
       }
       return true;
     }
@@ -176,15 +165,13 @@ public:
     void downloadFile(std::shared_ptr<Packet> packet){
       std::string message(packet->buffer, packet->bufferLen);
 
-      std::ofstream f;
+      fileMgr.create_file_part(packet->filename, packet->buffer, packet->fragmentNum, packet->totalFragments);
 
-      if (packet->fragmentNum == 0)
-        f.open(packet->filename);
-      else
-        f.open(packet->filename, std::fstream::app);
-
-      f << message;
-      f.close();
+      if (packet->fragmentNum == packet->totalFragments-1)
+      {
+        fileMgr.join_files(packet->filename);
+        fileMgr.clean_parts(packet->filename);
+      }
     }
 
     void requestDownload(char filename[FILENAME_MAX_SIZE]){

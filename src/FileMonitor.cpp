@@ -51,9 +51,8 @@ map<string, FILE_MOD_t> FileMonitor::diff_dir(){
                         // check if changes in mtime was just an update to the timestamp of
                         // the file - ocurr when a file is copied, for example
                         bool tc = (files[name].st_ctime == buffer.st_ctime);
-                        bool ta = (files[name].st_atime == buffer.st_atime);
                         bool s = (files[name].st_size == buffer.st_size);
-                        if (tc && ta && s)
+                        if (tc && s)
                         {
                             files[name] = buffer;
                         } else{
