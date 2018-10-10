@@ -13,8 +13,8 @@ int main(void){
 
     client.download("alo.txt");
     
+    client.upload("alo.txt");
     std::cin >> dummy;
-    //client.upload("alo.txt");
     
     client.stop();
 

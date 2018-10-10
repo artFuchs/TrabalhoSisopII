@@ -56,16 +56,28 @@ void Server::run(int numberOfThreads){
             // Checks if there is a ServerSession for the client that has sent the message
             if(it == _serverSessions.end()){
                 std::cout << "NEW SESSION" << std::endl;
-                std::shared_ptr<ServerSession> newSession(new ServerSession(_listenSocket));
-                newSession->setReceiverAddress(_listenSocket.getReadingAddress());
-                _serverSessions.insert(std::make_pair(clientAddress, newSession));
-                it = _serverSessions.find(clientAddress);
+                if(packet->type == PacketType::LOGIN){
+                    std::string username(packet->buffer, packet->bufferLen);
+                    std::shared_ptr<SessionSupervisor<ServerSession>> supervisor(new SessionSupervisor<ServerSession>(username));   // Is lost if the supervisor already exists
+                    auto sup = _serverSessionsByUsername.find(username);
+                    if(sup != _serverSessionsByUsername.end()){
+                        supervisor = sup->second;
+                    } else{
+                        _serverSessionsByUsername.insert(std::make_pair(username, supervisor));
+                    }
+                    std::shared_ptr<ServerSession> newSession(new ServerSession(clientAddress, _listenSocket, supervisor));
+                    newSession->setReceiverAddress(_listenSocket.getReadingAddress());
+                    _serverSessions.insert(std::make_pair(clientAddress, newSession));
+                    supervisor->addSession(std::make_pair(clientAddress, newSession));
+                    it = _serverSessions.find(clientAddress);
+                } else{
+                    // TODO: we should reject the connection
+                }
             }
             
             {
                 std::lock_guard<std::mutex> lck(_jobPoolMutex);
                 _jobPool.push_back(std::make_pair(it->second, packet));
-                //it->second->onSessionReadMessage(packet);
             }
         }
     }

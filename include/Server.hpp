@@ -24,6 +24,10 @@ private:
     std::mutex _jobPoolMutex;
 
     std::map<std::string, std::shared_ptr<ServerSession>> _serverSessions;
+    // ServerSessions organized by ServerSession
+    // Only one ServerSession is stored here
+    std::map<std::string, std::shared_ptr<SessionSupervisor<ServerSession>>> _serverSessionsByUsername;
+    //std::mutex _ssByUsernameMutex; // Useful if we want to add another thread to receive new messages
 
     int _port;
     bool _running;

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <cstring>
 #include "Session.hpp"
+#include "SessionSupervisor.hpp"
 #include "FileManager.hpp"
 #define BUFFER_MAX_SIZE 256
 
@@ -18,15 +19,23 @@ private:
     bool _loggedIn;
     uint32_t _packetNum;
     FileManager fileMgr;
+    std::string _sessionAddress;
+    std::shared_ptr<SessionSupervisor<ServerSession>> _supervisor;
 
 public:
 
-    ServerSession(UDPSocket& socket) : Session<true>(socket){
+    ServerSession(std::string& sessionAddress, UDPSocket& socket, std::shared_ptr<SessionSupervisor<ServerSession>> supervisor) :
+        Session<true>(socket), _supervisor(supervisor), _sessionAddress(sessionAddress){
         _loggedIn = false;
         _packetNum = 0;
     }
 
     void stop(void){
+    }
+
+    void onAnotherSessionMessage(std::shared_ptr<Packet> packet){
+        std::string message(packet->buffer, packet->bufferLen);
+        std::cout << "Another client sent me: " << message << std::endl;
     }
 
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
@@ -36,7 +45,8 @@ public:
             std::string message(packet->buffer, packet->bufferLen);
             std::cout << "Received: " << message << "Sending back the message..." << std::endl;
             receiveFile(packet);
-            _packetNum++;
+            _supervisor->sendPacket(_sessionAddress, packet);
+            //_packetNum++;     // Should be increased when sending a message to the client
 
         } else if(packet->type == PacketType::LOGIN){
             _loggedIn = true;
@@ -63,6 +73,8 @@ public:
             std::cout << "Received an ACK!" << std::endl;
         } else if(packet->type == PacketType::DOWNLOAD){
           sendFile(packet->filename);
+        } else if(packet->type == PacketType::EXIT){
+
         }
     }
 
