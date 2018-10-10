@@ -65,7 +65,7 @@ void Server::run(int numberOfThreads){
             {
                 std::lock_guard<std::mutex> lck(_jobPoolMutex);
                 _jobPool.push_back(std::make_pair(it->second, packet));
-                it->second->onSessionReadMessage(packet);
+                //it->second->onSessionReadMessage(packet);
             }
         }
     }
