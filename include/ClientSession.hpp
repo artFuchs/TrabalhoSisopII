@@ -8,6 +8,7 @@
 #include <math.h>
 #include <fstream>
 #include "Session.hpp"
+#include "FileManager.hpp"
 #define FILENAME_MAX_SIZE   256
 #define BUFFER_MAX_SIZE 256
 
@@ -24,6 +25,7 @@ private:
     std::mutex _modifyingDirectory;
     uint32_t _packetNum;
     bool _running;
+    FileManager fileMgr;
 
 public:
 
@@ -58,6 +60,9 @@ public:
         } catch(std::exception& e){
             std::cout << e.what() << std::endl;
         }
+
+
+        fileMgr.check_dir("./sync_" + username);
 
         std::cout << "Session connected!" << std::endl;
     }
@@ -109,23 +114,38 @@ public:
     bool uploadFile(char filename[FILENAME_MAX_SIZE]){
       bool readFile = false;
       char buffer[BUFFER_MAX_SIZE];
-      FILE * file = fopen(filename, "r");
-      int currentFragment = 0;
-
+      // FILE * file = fopen(filename, "r");
+      // int currentFragment = 0;
+      //
       //check if file exists
-      if (!file){
-        std::cout << "No such file\n";
+      // if (!file){
+      //   std::cout << "No such file\n";
+      //   return false;
+      // }
+      // //get size
+      // fseek(file, 0, SEEK_END);
+      // int size = ftell(file);
+      // fseek(file, 0, SEEK_SET);
+
+      if (!fileMgr.is_valid())
+      {
+        std::cout << "Directory is invalid" << std::endl;
+        return false;
+      }
+
+      map<std::string, STAT_t> files = fileMgr.read_dir();
+      if (files.find(filename)==files.end())
+      {
+        std::cout << "No such file" << std::endl;
         return false;
       }
       //get size
-      fseek(file, 0, SEEK_END);
-      int size = ftell(file);
-      fseek(file, 0, SEEK_SET);
+      int size = files[filename].st_size;
 
       double nFragments = double(size)/double(BUFFER_MAX_SIZE);
       int ceiledFragments = ceil(nFragments);
 
-      while(!readFile){
+      while(fileMgr.read_file())){
         int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
         if (amountRead > 0){
           bool ack = false;
