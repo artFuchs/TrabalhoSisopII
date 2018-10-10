@@ -83,12 +83,12 @@ map<string, STAT_t> FileManager::read_dir(){
     return _files;
 }
 
-int FileManager::create_file(string name, char contents[]){
+int FileManager::create_file(string name, char contents[], uint max_size){
     ofstream outFile;
     string fpath = path+name;
     try{
         outFile.open(fpath);
-        outFile << contents;
+        outFile.write(contents,max_size);
         outFile.close();
     } catch (std::ifstream::failure e){
         return -1;
@@ -96,7 +96,7 @@ int FileManager::create_file(string name, char contents[]){
     return 0;
 }
 
-int FileManager::create_file_part(string name, char contents[], int part , int total){
+int FileManager::create_file_part(string name, char contents[], uint max_size, int part , int total){
     ofstream outFile;
     string _path = path+string(".")+name+to_string(part);
 
@@ -106,7 +106,7 @@ int FileManager::create_file_part(string name, char contents[], int part , int t
 
     try{
         outFile.open(_path);
-        outFile << contents;
+        outFile.write(contents,max_size);
         outFile.close();
         file_pieces[name][part] = "." + name + to_string(part);
     } catch (std::ifstream::failure e){
@@ -163,16 +163,17 @@ int FileManager::delete_file(string name){
 }
 
 uint FileManager::read_file(string name, char* buffer, uint n){
+
     //if file is not opened already, open it
     if (opened_files.find(name)==opened_files.end()){
         opened_files[name] = ifstream();
     }
-    
+
     ifstream *file = &opened_files[name];
 
     file->open(path+name);
     if (file){
-        file->read(buffer, n);
+        file->read(buffer, n-1);
         uint read = file->gcount();
         buffer[read] = '\0';
         if (file->eof()){

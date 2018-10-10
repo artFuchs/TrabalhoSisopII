@@ -8,7 +8,7 @@
 #include <math.h>
 #include <fstream>
 #include "Session.hpp"
-#include "FileManager.hpp"
+#include "FileMonitor.hpp"
 #define FILENAME_MAX_SIZE   256
 #define BUFFER_MAX_SIZE 256
 
@@ -165,7 +165,7 @@ public:
     void downloadFile(std::shared_ptr<Packet> packet){
       std::string message(packet->buffer, packet->bufferLen);
 
-      fileMgr.create_file_part(packet->filename, packet->buffer, packet->fragmentNum, packet->totalFragments);
+      fileMgr.create_file_part(packet->filename, packet->buffer, packet->bufferLen, packet->fragmentNum, packet->totalFragments);
 
       if (packet->fragmentNum == packet->totalFragments-1)
       {

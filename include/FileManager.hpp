@@ -58,20 +58,22 @@ public:
     /* create_file : cria um arquivo
             parâmetros: name - string : nome do arquivo;
                         buffer - char[] : conteúdo do arquivo;
+                        max_size - uint : tamanho limite do buffer;
             retorno : int - 0 se não ocorreu erro
                             <0 se ocorreu erro
     */
-    int create_file(string, char[]);
+    int create_file(string, char[], uint);
 
     /* create_file_part : cria um arquivo que é parte de outro arquivo
             parâmetros: name - string : nome da parte do arquivo;
                         buffer - char[] : conteúdo do arquivo;
+                        max_size - uint : tamanho limite do buffer;
                         part - int : qual parte do arquivo está sendo criada;
                         total - int : total de partes a serem criadas - deve ser chamado na primeira chamada do método para o arquivo
             retorno : int - 0 se não ocorreu erro
                            <0 se ocorreu erro
     */
-    int create_file_part(string, char[], int, int);
+    int create_file_part(string, char[], uint, int, int);
 
     /* join_files : junta diversas partes de um arquivo
             parâmetros : name - string : nome do arquivo

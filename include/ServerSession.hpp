@@ -62,6 +62,7 @@ public:
         } else if(packet->type == PacketType::ACK){
             std::cout << "Received an ACK!" << std::endl;
         } else if(packet->type == PacketType::DOWNLOAD){
+          std::cout << "download" << std::endl;
           sendFile(packet->filename);
         }
     }
