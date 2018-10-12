@@ -44,9 +44,11 @@ public:
             std::string directory = std::string("./") + std::string(packet->buffer);
             fileMgr.check_dir(directory);
             if (fileMgr.is_valid()){
-                // TODO: create a login return message
-                //sendMessageServer();
-                //std::cout << "Login return sent!" << std::endl;
+                /* TODO: create a login return message
+                  this login return message must tell the client if it
+                  successfully logged in */
+                // sendMessageServer();
+                // std::cout << "Login return sent!" << std::endl;
 
                 map<string, STAT_t> files;
                 files = fileMgr.read_dir();
@@ -75,18 +77,28 @@ public:
     }
 
     void receiveFile(std::shared_ptr<Packet> packet){
-      string fullPath = buildFullPath(packet->filename);
-
+      //string fullPath = buildFullPath(packet->filename);
+      string fname = string(packet->filename);
       std::string message(packet->buffer, packet->bufferLen);
 
-      ofstream f;
-      if (packet->fragmentNum == 0)
-        f.open(fullPath);
-      else
-        f.open(fullPath, fstream::app);
+      // ofstream f;
+      // if (packet->fragmentNum == 0)
+      //   f.open(fullPath);
+      // else
+      //   f.open(fullPath, fstream::app);
+      //
+      // f << message;
+      // f.close();
 
-      f << message;
-      f.close();
+      if (fileMgr.is_valid()){
+        if (packet->fragmentNum == 0)
+          fileMgr.create_file(fname, message);
+        else
+          fileMgr.append_file(fname, message);
+      } else{
+        std::cout << "Sync directory is invalid" << std::endl;
+      }
+
     }
 
     bool sendFile(char filename[FILENAME_MAX_SIZE]){
