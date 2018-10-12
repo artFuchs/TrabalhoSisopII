@@ -96,6 +96,32 @@ int FileManager::create_file(string name, char contents[], uint max_size){
     return 0;
 }
 
+int FileManager::create_file(string name, string contents){
+    ofstream outFile;
+    string fpath = path+name;
+    try{
+        outFile.open(fpath);
+        outFile << contents;
+        outFile.close();
+    } catch (std::ifstream::failure e){
+        return -1;
+    }
+    return 0;
+}
+
+int FileManager::append_file(string name, string content){
+    ofstream outFile;
+    string fpath = path+name;
+    try{
+        outFile.open(fpath,fstream::app);
+        outFile << content;
+        outFile.close();
+    } catch (std::ifstream::failure e){
+        return -1;
+    }
+    return 0;
+}
+
 int FileManager::create_file_part(string name, char contents[], uint max_size, int part , int total){
     ofstream outFile;
     string _path = path+string(".")+name+to_string(part);

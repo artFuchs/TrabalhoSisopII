@@ -118,7 +118,7 @@ public:
 
       if (!fileMgr.is_valid())
       {
-        std::cout << "Directory is invalid" << std::endl;
+        std::cout << "sync directory is invalid" << std::endl;
         return false;
       }
 
@@ -157,7 +157,6 @@ public:
         }
         if (amountRead < BUFFER_MAX_SIZE-1) {
           readFile = true;
-          std::cout << "ended upload cause read" << amountRead << std::endl;
         }
       }
       return true;
@@ -165,14 +164,31 @@ public:
 
     void downloadFile(std::shared_ptr<Packet> packet){
       std::string message(packet->buffer, packet->bufferLen);
+      std::string fname = std::string(packet->filename);
 
-      fileMgr.create_file_part(packet->filename, packet->buffer, packet->bufferLen, packet->fragmentNum, packet->totalFragments);
 
-      if (packet->fragmentNum == packet->totalFragments-1)
+      if (!fileMgr.is_valid())
       {
-        fileMgr.join_files(packet->filename);
-        fileMgr.clean_parts(packet->filename);
+        std::cout << "Sync directory is invalid" << std::endl;
+        return;
       }
+
+      if (packet->fragmentNum == 0)
+      {
+        fileMgr.create_file(fname, message);
+      }
+      else
+      {
+        fileMgr.append_file(fname, message);
+      }
+
+      // fileMgr.create_file_part(packet->filename, packet->buffer, packet->bufferLen, packet->fragmentNum, packet->totalFragments);
+      //
+      // if (packet->fragmentNum == packet->totalFragments-1)
+      // {
+      //   fileMgr.join_files(packet->filename);
+      //   fileMgr.clean_parts(packet->filename);
+      // }
     }
 
     void requestDownload(char filename[FILENAME_MAX_SIZE]){

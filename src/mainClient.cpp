@@ -10,8 +10,8 @@ int main(void){
     std::string dummy;
 
     client.start();
-    client.upload("alo.txt");
-    //client.download("alo2.txt");
+    //client.upload("alo.txt");
+    client.download("alo2.txt");
 
     std::cin >> dummy;
 
