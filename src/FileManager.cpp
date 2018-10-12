@@ -167,11 +167,11 @@ uint FileManager::read_file(string name, char* buffer, uint n){
     //if file is not opened already, open it
     if (opened_files.find(name)==opened_files.end()){
         opened_files[name] = ifstream();
+        opened_files[name].open(path+name);
     }
 
     ifstream *file = &opened_files[name];
 
-    file->open(path+name);
     if (file){
         file->read(buffer, n-1);
         uint read = file->gcount();

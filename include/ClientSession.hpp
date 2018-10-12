@@ -155,8 +155,9 @@ public:
           _packetNum++;
           currentFragment++;
         }
-        if (amountRead < BUFFER_MAX_SIZE) {
+        if (amountRead < BUFFER_MAX_SIZE-1) {
           readFile = true;
+          std::cout << "ended upload cause read" << amountRead << std::endl;
         }
       }
       return true;
