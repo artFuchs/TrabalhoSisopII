@@ -114,28 +114,24 @@ public:
     bool uploadFile(char filename[FILENAME_MAX_SIZE]){
       bool readFile = false;
       char buffer[BUFFER_MAX_SIZE];
+      FILE * file = fopen(filename, "r");
       int currentFragment = 0;
 
-      if (!fileMgr.is_valid())
-      {
-        std::cout << "sync directory is invalid" << std::endl;
-        return false;
-      }
-
-      map<std::string, STAT_t> files = fileMgr.read_dir();
-      if (files.find(filename)==files.end())
-      {
-        std::cout << "No such file" << std::endl;
+      //check if file exists
+      if (!file){
+        std::cout << "No such file\n";
         return false;
       }
       //get size
-      int size = files[filename].st_size;
+      fseek(file, 0, SEEK_END);
+      int size = ftell(file);
+      fseek(file, 0, SEEK_SET);
 
       double nFragments = double(size)/double(BUFFER_MAX_SIZE);
       int ceiledFragments = ceil(nFragments);
 
       while(!readFile){
-        int amountRead = fileMgr.read_file(filename,buffer,BUFFER_MAX_SIZE);
+        int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
         if (amountRead > 0){
           bool ack = false;
           std::shared_ptr<Packet> packet(new Packet);
@@ -154,41 +150,24 @@ public:
           }
           _packetNum++;
           currentFragment++;
-        }
-        if (amountRead < BUFFER_MAX_SIZE-1) {
+        } else {
           readFile = true;
         }
       }
-      return true;
     }
 
     void downloadFile(std::shared_ptr<Packet> packet){
       std::string message(packet->buffer, packet->bufferLen);
-      std::string fname = std::string(packet->filename);
 
-
-      if (!fileMgr.is_valid())
-      {
-        std::cout << "Sync directory is invalid" << std::endl;
-        return;
-      }
+      std::ofstream f;
 
       if (packet->fragmentNum == 0)
-      {
-        fileMgr.create_file(fname, message);
-      }
+        f.open(packet->filename);
       else
-      {
-        fileMgr.append_file(fname, message);
-      }
+        f.open(packet->filename, std::fstream::app);
 
-      // fileMgr.create_file_part(packet->filename, packet->buffer, packet->bufferLen, packet->fragmentNum, packet->totalFragments);
-      //
-      // if (packet->fragmentNum == packet->totalFragments-1)
-      // {
-      //   fileMgr.join_files(packet->filename);
-      //   fileMgr.clean_parts(packet->filename);
-      // }
+      f << message;
+      f.close();
     }
 
     void requestDownload(char filename[FILENAME_MAX_SIZE]){
