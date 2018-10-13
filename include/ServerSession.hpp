@@ -104,25 +104,39 @@ public:
     bool sendFile(char filename[FILENAME_MAX_SIZE]){
       bool readFile = false;
       char buffer[BUFFER_MAX_SIZE];
-      string fullPath = buildFullPath(filename);
-      FILE * file = fopen(fullPath.c_str(), "r");
+      //string fullPath = buildFullPath(filename);
+      //FILE * file = fopen(fullPath.c_str(), "r");
       int currentFragment = 0;
 
-      //check if file exists
-      if (!file){
-        std::cout << "No such file\n";
+      if (!fileMgr.is_valid()){
+        std::cout << "sync directory is invalid" << std::endl;
         return false;
       }
+
+      //check if file exists
+      // if (!file){
+      //   std::cout << "No such file\n";
+      //   return false;
+      // }
+      map<std::string, STAT_t> files = fileMgr.read_dir();
+      if (files.find(filename)==files.end())
+      {
+        std::cout << "No such file" << std::endl;
+        return false;
+      }
+
       //get size
-      fseek(file, 0, SEEK_END);
-      int size = ftell(file);
-      fseek(file, 0, SEEK_SET);
+      // fseek(file, 0, SEEK_END);
+      // int size = ftell(file);
+      // fseek(file, 0, SEEK_SET);
+      int size = files[filename].st_size;
 
       double nFragments = double(size)/double(BUFFER_MAX_SIZE);
       int ceiledFragments = ceil(nFragments);
 
       while(!readFile){
-        int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+        //int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+        int amountRead = fileMgr.read_file(filename,buffer,BUFFER_MAX_SIZE);
         if (amountRead > 0){
           bool ack = false;
           std::shared_ptr<Packet> packet(new Packet);
@@ -141,10 +155,12 @@ public:
           }
           _packetNum++;
           currentFragment++;
-        } else {
+        // } else {
+        //   readFile = true;
+        }
+        if (amountRead < BUFFER_MAX_SIZE-1) {
           readFile = true;
         }
-
       }
       return true;
     }
