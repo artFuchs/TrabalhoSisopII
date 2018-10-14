@@ -16,11 +16,19 @@ int main()
     fm.create_file_part("test2", (char*)"em ", 5, 7);
     fm.create_file_part("test2", (char*)"partes.", 6, 7);
     fm.join_files("test2");
+    
     int err = fm.clean_parts("test2");
     if (err != 0)
     {
         cout << "error cleanning temporary files: " << err << endl;
     }
+
+    char buffer[64];
+    if (fm.read_file("test2",buffer,64)>0)
+    {
+        cout << buffer << endl;
+    }      
+    
 
     return 0;
 }

@@ -35,7 +35,7 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
     _clientSession.connect(username);   // We need to be receiving messages before attempting to connect
 
     _monitoringThread = std::thread([&]{
-        std::string dir_name = std::string("./sync_") + std::string(username);
+        std::string dir_name = std::string("./sync_") + username;
         FileMonitor fm(dir_name);
         if (!fm.is_valid())
         {

@@ -54,9 +54,11 @@ public:
             std::string directory = std::string("./") + std::string(packet->buffer);
             fileMgr.check_dir(directory);
             if (fileMgr.is_valid()){
-                // TODO: create a login return message
-                //sendMessageServer();
-                //std::cout << "Login return sent!" << std::endl;
+                /* TODO: create a login return message
+                  this login return message must tell the client if it
+                  successfully logged in */
+                // sendMessageServer();
+                // std::cout << "Login return sent!" << std::endl;
 
                 map<string, STAT_t> files;
                 files = fileMgr.read_dir();
@@ -72,6 +74,7 @@ public:
         } else if(packet->type == PacketType::ACK){
             std::cout << "Received an ACK!" << std::endl;
         } else if(packet->type == PacketType::DOWNLOAD){
+          std::cout << "download" << std::endl;
           sendFile(packet->filename);
         } else if(packet->type == PacketType::EXIT){
 
@@ -86,42 +89,66 @@ public:
     }
 
     void receiveFile(std::shared_ptr<Packet> packet){
-      string fullPath = buildFullPath(packet->filename);
-
+      //string fullPath = buildFullPath(packet->filename);
+      string fname = string(packet->filename);
       std::string message(packet->buffer, packet->bufferLen);
 
-      ofstream f;
-      if (packet->fragmentNum == 0)
-        f.open(fullPath);
-      else
-        f.open(fullPath, fstream::app);
+      // ofstream f;
+      // if (packet->fragmentNum == 0)
+      //   f.open(fullPath);
+      // else
+      //   f.open(fullPath, fstream::app);
+      //
+      // f << message;
+      // f.close();
 
-      f << message;
-      f.close();
+      if (fileMgr.is_valid()){
+        if (packet->fragmentNum == 0)
+          fileMgr.create_file(fname, message);
+        else
+          fileMgr.append_file(fname, message);
+      } else{
+        std::cout << "Sync directory is invalid" << std::endl;
+      }
+
     }
 
     bool sendFile(char filename[FILENAME_MAX_SIZE]){
       bool readFile = false;
       char buffer[BUFFER_MAX_SIZE];
-      string fullPath = buildFullPath(filename);
-      FILE * file = fopen(fullPath.c_str(), "r");
+      //string fullPath = buildFullPath(filename);
+      //FILE * file = fopen(fullPath.c_str(), "r");
       int currentFragment = 0;
 
-      //check if file exists
-      if (!file){
-        std::cout << "No such file\n";
+      if (!fileMgr.is_valid()){
+        std::cout << "sync directory is invalid" << std::endl;
         return false;
       }
+
+      //check if file exists
+      // if (!file){
+      //   std::cout << "No such file\n";
+      //   return false;
+      // }
+      map<std::string, STAT_t> files = fileMgr.read_dir();
+      if (files.find(filename)==files.end())
+      {
+        std::cout << "No such file" << std::endl;
+        return false;
+      }
+
       //get size
-      fseek(file, 0, SEEK_END);
-      int size = ftell(file);
-      fseek(file, 0, SEEK_SET);
+      // fseek(file, 0, SEEK_END);
+      // int size = ftell(file);
+      // fseek(file, 0, SEEK_SET);
+      int size = files[filename].st_size;
 
       double nFragments = double(size)/double(BUFFER_MAX_SIZE);
       int ceiledFragments = ceil(nFragments);
 
       while(!readFile){
-        int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+        //int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+        int amountRead = fileMgr.read_file(filename,buffer,BUFFER_MAX_SIZE);
         if (amountRead > 0){
           bool ack = false;
           std::shared_ptr<Packet> packet(new Packet);
@@ -140,10 +167,12 @@ public:
           }
           _packetNum++;
           currentFragment++;
-        } else {
+        // } else {
+        //   readFile = true;
+        }
+        if (amountRead < BUFFER_MAX_SIZE-1) {
           readFile = true;
         }
-
       }
       return true;
     }

@@ -8,6 +8,7 @@
 #include <math.h>
 #include <fstream>
 #include "Session.hpp"
+#include "FileMonitor.hpp"
 #define FILENAME_MAX_SIZE   256
 #define BUFFER_MAX_SIZE 256
 
@@ -24,6 +25,7 @@ private:
     std::mutex _modifyingDirectory;
     uint32_t _packetNum;
     bool _running;
+    FileManager fileMgr;
 
 public:
 
@@ -58,6 +60,9 @@ public:
         } catch(std::exception& e){
             std::cout << e.what() << std::endl;
         }
+
+
+        fileMgr.check_dir(string("./sync_") + username);
 
         std::cout << "Session connected!" << std::endl;
     }
@@ -148,9 +153,7 @@ public:
         } else {
           readFile = true;
         }
-
       }
-      return true;
     }
 
     void downloadFile(std::shared_ptr<Packet> packet){
