@@ -42,8 +42,15 @@ public:
         Session<true>::onSessionReadMessage(packet);    // Handles ACK
 
         if(packet->type == PacketType::DATA){
-            std::string message(packet->buffer, packet->bufferLen);
-            std::cout << "Received: " << message << "Sending back the message..." << std::endl;
+            //std::string message(packet->buffer, packet->bufferLen);
+            //std::cout << "Received: " << message << "Sending back the message..." << std::endl;
+
+            std::string file(packet->filename, packet->pathLen);
+            uint part = packet->fragmentNum;
+            uint total = packet->totalFragments;
+            double percent = 100*(((double)part+1)/(double)total);
+            std::cout << "Received: " << file << " (" << part << " / " << total-1 << ") - " << percent << "%" << std::endl;
+
             receiveFile(packet);
             _supervisor->sendPacket(_sessionAddress, packet);
             //_packetNum++;     // Should be increased when sending a message to the client
@@ -62,9 +69,11 @@ public:
 
                 map<string, STAT_t> files;
                 files = fileMgr.read_dir();
-                if (!files.empty())
+                for (auto file = files.begin(); file != files.end(); file++)
                 {
-                    // TODO: send the files to the client
+                  char fname[FILENAME_MAX_SIZE];
+                  strcpy(fname,file->first.c_str());
+                  sendFile(fname);
                 }
             }
             else {
@@ -81,16 +90,19 @@ public:
         }
     }
 
-    string buildFullPath(char filename[FILENAME_MAX_SIZE]){
-      string fullPath (fileMgr.getPath());
-      fullPath += "/";
-      fullPath += filename;
-      return fullPath;
+    std::string parsePath(char filename[FILENAME_MAX_SIZE]){
+      //check if filename init by "@LOCAL"
+      std::string path(filename);
+      if (path.find("@LOCAL/") != std::string::npos){
+        //remove @LOCAL from string
+        path.erase(0,std::string("@LOCAL/").size());
+      }
+      return path;
     }
 
     void receiveFile(std::shared_ptr<Packet> packet){
       //string fullPath = buildFullPath(packet->filename);
-      string fname = string(packet->filename);
+      std::string fname = parsePath(packet->filename);
       std::string message(packet->buffer, packet->bufferLen);
 
       // ofstream f;

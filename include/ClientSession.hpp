@@ -63,6 +63,8 @@ public:
 
 
         fileMgr.check_dir(string("./sync_") + username);
+        if (!fileMgr.is_valid())
+            throw std::runtime_error("couldn't find nor create sync directory ");
 
         std::cout << "Session connected!" << std::endl;
     }
@@ -102,8 +104,13 @@ public:
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<false>::onSessionReadMessage(packet);    // Handles ACK
         if(packet->type == PacketType::DATA){
-          std::string message(packet->buffer, packet->bufferLen);
-          std::cout << "Received: " << message << "Sending back the message..." << std::endl;
+          //std::string message(packet->buffer, packet->bufferLen);
+          std::string file(packet->filename, packet->pathLen);
+          uint part = packet->fragmentNum;
+          uint total = packet->totalFragments;
+          double percent = 100*(((double)part+1)/(double)total);
+          std::cout << "Received: " << file << " (" << part << " / " << total-1 << ") - " << percent << "%" << std::endl;
+          //std::cout << "Received: " << message << "Sending back the message..." << std::endl;
           downloadFile(packet);
           _packetNum++;
         } else{
@@ -156,15 +163,32 @@ public:
       }
     }
 
+
+    std::string parsePath(char filename[FILENAME_MAX_SIZE]){
+      //check if filename init by "@LOCAL"
+      std::string path(filename);
+      if (path.find("@LOCAL/") != std::string::npos){
+        //remove @LOCAL from string
+        path.erase(0,std::string("@LOCAL/").size());
+      }
+      else
+      {
+        path = fileMgr.getPath() + path;
+      }
+      return path;
+    }
+
     void downloadFile(std::shared_ptr<Packet> packet){
       std::string message(packet->buffer, packet->bufferLen);
+
+      std::string filename = parsePath(packet->filename);
 
       std::ofstream f;
 
       if (packet->fragmentNum == 0)
-        f.open(packet->filename);
+        f.open(filename);
       else
-        f.open(packet->filename, std::fstream::app);
+        f.open(filename, std::fstream::app);
 
       f << message;
       f.close();

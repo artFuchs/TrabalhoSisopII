@@ -100,8 +100,11 @@ void Client::upload(char filename[FILENAME_MAX_SIZE]){
   _clientSession.uploadFile(filename);
 }
 
-void Client::download(char filename[FILENAME_MAX_SIZE]){
-  _clientSession.requestDownload(filename);;
+void Client::download(char filename[]){
+  char _filename[FILENAME_MAX_SIZE];
+  std::string fn = "@LOCAL/" + std::string(filename);
+  strcpy(_filename, fn.c_str());
+  _clientSession.requestDownload(_filename);
 }
 
 
