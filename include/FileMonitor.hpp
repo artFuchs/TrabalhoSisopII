@@ -28,7 +28,6 @@ private:
 
 public:
     FileMonitor(string);
-
     /* diff_dir : examina o diretório, retornando modificações, se ocorreram
           retorno : mudanças encontradas nos arquivos - map<string, FILE_MOD_t>
     */

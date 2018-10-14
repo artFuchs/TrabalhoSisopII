@@ -1,0 +1,113 @@
+# Abstract
+
+The paper describes a method for generating estimates of processorerror rates.  
+Key aspect: some single-bit faults will not produce an error in a program output.  
+The probability of a fault resulting in an error is called Architetural Vulnerability Factor (AVF).  
+
+----
+# 1. Introduction
+
+Moore's Law -> progress in the funcionality and preformance of semiconductor devices, but also in new obstacles to maintaining the growth rate due to **single event upsets** resulting in **Transient Faults**.  
+Energetic partciles passing through a semiconductor device cause single event upsets to arise.  
+A device error rate due to SEU depends on the particle flux and its circuits characteristics. Particle flux depens on the environment (e.g. higher altitudes, most cosmic rays). Device circuit parameters that influence the error rate include the amount of charge stored, the vulnerable cross-section area, and the charge collection efficiency; smaller transistors are easier to be changed by the particle charge, but have smaller cross-section areas, having less probability to be hit by particles.  
+The error rate per latch or SRAM cells are projected to remain constant for a certain altitude. With no error correction schemes, the error rate will grown in direct proportion for the number of bits in the chip (Moore Law = exponential increase in transistors -> unprotected chips + Moore Law = exponential increase in error rates).  
+Techniques to deal with faults = penalty in performanse, power, die size and design time.  
+Not all faults in microarchitetural structure result in errors. Overall error rate of of microarchitetural structure = fault rate * AFV.
+**architecturally correct execution (ACE)** bits cause visible error in cause of fault in an storage cell that contain one of them. **un-ACE** bits don't cause errors in cause of fault. AVF of a structure is thus the average fraction of its storage cells that holds ACE bits.  
+To calculate AVF in structures that hold ACE bits and un-ACE bits depending on the time, we track the ACE bits throuch the pipeline, determine the average number of ACE bits to each particular structure and take the ratios of these numbers.  
+upper bounds on AVFs: assume that every bit is an ACE bit unless it can be proved otherwise.
+
+----
+# 2. Soft Error Background and Terminology
+
+## 2.1. MTBF and FIT
+
+**MTBF**: Mean Time Betwen Failures  
+**SDC**: Silent Data Corruption -> erros not detected  
+**DUE**: Detected Unrecoverable Errors.  
+(Detected Recoverable Errors are not errors).  
+SDC + error detection = DUE.  
+**FIT**: Error in Time. Inversely related to MTBF.  
+
+ - 1 FIT = 1 failure / 10^9 hours.
+ - zero FIT = infinite MTBF.
+ - FIT is additive -> designers work with it.
+
+In order to evaluate if a chip meets the desired error rate, microprocessor designers compute the FIT rate for every device on the chip.  
+Effective FIT rate for a structure = raw circuit FIT * it's *Vulnerability Factor*.  
+FIT rate of the chip = sum of FIT rates of all structures on the chip.  
+
+FIT rate for latches and SRAM cells ~0.001 - 0.01 FIT/bit at sea level.
+FIT contribution from latches and SRAM >>>>> contribution of logical gates.
+
+## 2.2. Vulnerability Factors (VF)
+
+Influence in the effective FIT rate. 
+VF indicates the prob that an internal fault in a device will resul in error.  
+AVF expresses the prob that a visible system error will occur given a bit flip in a storage cell.
+
+----
+# 3. Identifying un-ACE bits
+
+We only care about the final system output as observed by the user is correct. Incorrected results not observed by the user are irrelevant, and are caused by un-ACE bits.  
+**Program's output normaly are the values sent by it via I/O**, but if we use a debugger, the program variables examined by the debugger become outputs and influence the determination of wich are ACE bits.  
+Parallel programs: a bit may be ACE or un-ACE depending on the outcome of the race conditions.  
+To determine wich bits are ACE or un-ACE, we do:
+ 1. Assume that all bits are ACE
+ 2. identify as meny sources of un-ACE bits we can.
+Sources of un-ACE bits are classified in **microarchitetural** and **architetural**.
+
+## 3.1. Microarchitetural un-ACE Bits
+
+Processor state bits that cannot influence the commited instruction path. They can arise from:
+
+ - Idle or Invalid states. Instances when a data or status bits is idle or does not contain any valid information.
+ - Mis-speculated State. e.g branch prediction or speculative memory disambiguation.
+ - Prediction structures.
+ - Ex-ACE State. ACE bits that will be no longer used in the program.
+
+## 3.2. Architetural un-ACE Bits
+
+Bits that affect correct-path instruction execution in a way that will not interfere with the output. source: 
+
+ - NOP instructions. The only ACE bits are the op-code bits.
+ - Performance-enhancing instructions.
+ - Predicated-false instructions.
+ - Dynamically dead instructions. Instructions which results are not used. First-Level dinamicall Dead (FDD) are instructions wich results are not read. TRansitively dynamic dead (TDD) are instructions whose results are only read by FDD or other TDD instructions. opcode and destination register specifier bits of these instructions are counted as ACE bits.
+ - Logical masking. bits in operands whose values don't influence the computation's result. (e.g. R1   R2 OR 0xFFFF)
+
+
+----
+# 4. Computing AVF
+
+## 4.1. AVF Equations for a Hardware Structure
+
+AVF of an storage cell is the percentage of times an upset in that cell will cause a visible error in the output = percentage of time that it contains an ACE bit.  
+
+> i.e. AVF storage cell (sc) = cycles sc contains ACE bits / total cycles program
+
+To calculate the AVF of a whole hardware structure, we do:
+
+> sum(residency in cycles) of all ACE bits in a structure /
+> total number of bits in the hardware structure * total execution cycles
+
+## 4.2. Computing AVFs using Little Law.
+Little's Law can be translated in the equation
+> N = B*L  
+Where:
+
+ - N = average number of bits in a box.
+ - B = average bandwidth per cycle into the box.
+ - L = average latency of an individual bit through the box.
+
+We apply this to ACE bits:
+ 
+ - B-ace = average bandwidth of ACE bits in the box.
+ - L-ace = average residence cycles of an ACE bit in the box.
+
+> AVF = B-ace * L-ace / total number of bits in the hardware structure.
+
+In many cases, we can compute the bandwich of ACE bits and the average residence cycles of ACE instructions using HW performance counters.
+
+## 4.3.
+

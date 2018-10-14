@@ -25,13 +25,16 @@ namespace PacketType{
     enum E{
         ACK,
         DATA,
-        LOGIN
+        LOGIN,
+        EXIT,
+        DOWNLOAD
     };
 
     static constexpr const char* str[] = {
         "ACK",
         "DATA",
-        "LOGIN"
+        "LOGIN",
+        "DOWNLOAD"
     };
 
 }
@@ -45,7 +48,7 @@ struct Packet{
     PacketType::E type;
     // Incremented after each message; the side that receives a packet with a given
     // packetNum p must send an Packet ACK whose packetNum is p
-    uint32_t packetNum;          
+    uint32_t packetNum;
     // The first fragment is always zero; independent of packetNum
     uint32_t fragmentNum;
     // Number of fragments the file was divided in

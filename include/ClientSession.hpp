@@ -3,10 +3,14 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-
+#include <stdio.h>
 #include <cstring>
-
+#include <math.h>
+#include <fstream>
 #include "Session.hpp"
+#include "FileMonitor.hpp"
+#define FILENAME_MAX_SIZE   256
+#define BUFFER_MAX_SIZE 256
 
 namespace dropbox{
 
@@ -21,6 +25,7 @@ private:
     std::mutex _modifyingDirectory;
     uint32_t _packetNum;
     bool _running;
+    FileManager fileMgr;
 
 public:
 
@@ -54,7 +59,10 @@ public:
             }
         } catch(std::exception& e){
             std::cout << e.what() << std::endl;
-        }           
+        }
+
+
+        fileMgr.check_dir(string("./sync_") + username);
 
         std::cout << "Session connected!" << std::endl;
     }
@@ -93,15 +101,81 @@ public:
 
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<false>::onSessionReadMessage(packet);    // Handles ACK
-
         if(packet->type == PacketType::DATA){
-
+          std::string message(packet->buffer, packet->bufferLen);
+          std::cout << "Received: " << message << "Sending back the message..." << std::endl;
+          downloadFile(packet);
+          _packetNum++;
         } else{
-            std::cout << "ACK received" << std::endl;
+            std::cout << "ACK received " <<"\n";
         }
     }
 
+    bool uploadFile(char filename[FILENAME_MAX_SIZE]){
+      bool readFile = false;
+      char buffer[BUFFER_MAX_SIZE];
+      FILE * file = fopen(filename, "r");
+      int currentFragment = 0;
 
+      //check if file exists
+      if (!file){
+        std::cout << "No such file\n";
+        return false;
+      }
+      //get size
+      fseek(file, 0, SEEK_END);
+      int size = ftell(file);
+      fseek(file, 0, SEEK_SET);
+
+      double nFragments = double(size)/double(BUFFER_MAX_SIZE);
+      int ceiledFragments = ceil(nFragments);
+
+      while(!readFile){
+        int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+        if (amountRead > 0){
+          bool ack = false;
+          std::shared_ptr<Packet> packet(new Packet);
+          packet->type = PacketType::DATA;
+          packet->packetNum = _packetNum;
+          packet->fragmentNum = currentFragment;
+          packet->totalFragments = ceiledFragments;
+          packet->bufferLen = amountRead;
+          packet->pathLen = strlen(filename);
+          strcpy(packet->buffer, buffer);
+          strcpy(packet->filename, filename);
+          while(!ack){
+            int preturn = sendMessageClient(packet);
+            if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+            ack = waitAck(packet->packetNum);
+          }
+          _packetNum++;
+          currentFragment++;
+        } else {
+          readFile = true;
+        }
+      }
+    }
+
+    void downloadFile(std::shared_ptr<Packet> packet){
+      std::string message(packet->buffer, packet->bufferLen);
+
+      std::ofstream f;
+
+      if (packet->fragmentNum == 0)
+        f.open(packet->filename);
+      else
+        f.open(packet->filename, std::fstream::app);
+
+      f << message;
+      f.close();
+    }
+
+    void requestDownload(char filename[FILENAME_MAX_SIZE]){
+      std::shared_ptr<Packet> packet(new Packet);
+      packet->type = PacketType::DOWNLOAD;
+      strcpy(packet->filename, filename);
+      sendMessageClient(packet);
+    }
 };
 
 }
