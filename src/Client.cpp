@@ -50,24 +50,29 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
                     cout << "CHANGES!" << endl;
                     for (auto it = m.begin(); it!=m.end(); it++)
                     {
+                        char filename[FILENAME_MAX_SIZE];
                         cout << it->first;
                         switch (it->second.mod){
                         case MOVED:
                             cout << " moved/created" << endl;
+                            strcpy(filename, it->first.c_str());
+                            _clientSession.uploadFile(filename);
                             break;
                         case MODIFIED:
                             cout << " modified" << endl;
+                            strcpy(filename, it->first.c_str());
+                            _clientSession.uploadFile(filename);
                             break;
                         case ERASED:
                             cout << " erased" << endl;
                             break;
                         }
-                        if (it->second.mod!=ERASED){
-                            cout << "\t tamanho: " << it->second.file_stat.st_size << endl;
-                            cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
-                            cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
-                            cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
-                        }
+                        // if (it->second.mod!=ERASED){
+                        //     cout << "\t tamanho: " << it->second.file_stat.st_size << endl;
+                        //     cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
+                        //     cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
+                        //     cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
+                        // }
                     }
                     cout << endl;
                 }
@@ -97,7 +102,10 @@ void Client::stop(void){
 
 void Client::upload(char filename[FILENAME_MAX_SIZE]){
   std::cout << "upload signal send" << std::endl;
-  _clientSession.uploadFile(filename);
+  char _filename[FILENAME_MAX_SIZE];
+  std::string fn = GLOBAL_TOKEN + std::string(filename);
+  strcpy(_filename, fn.c_str());
+  _clientSession.uploadFile(_filename);
 }
 
 void Client::download(char filename[]){

@@ -126,11 +126,11 @@ public:
       //
       // f << message;
       // f.close();
-
       if (fileMgr.is_valid()){
-        if (packet->fragmentNum == 0)
+        if (packet->fragmentNum == 0){
+          std::cout << "creating file " << fname << std::endl;
           fileMgr.create_file(fname, message);
-        else
+        } else
           fileMgr.append_file(fname, message);
       } else{
         std::cout << "Sync directory is invalid" << std::endl;

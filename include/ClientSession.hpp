@@ -128,11 +128,16 @@ public:
         }
     }
 
-    bool uploadFile(char filename[FILENAME_MAX_SIZE]){
+    bool uploadFile(char _filename[]){
+      std::string fname = parsePath(_filename);
+      char filename[FILENAME_MAX_SIZE];
+      strcpy(filename,fname.c_str());
+
       bool readFile = false;
       char buffer[BUFFER_MAX_SIZE];
       FILE * file = fopen(filename, "r");
       int currentFragment = 0;
+
 
       //check if file exists
       if (!file){
@@ -159,7 +164,7 @@ public:
           packet->bufferLen = amountRead;
           packet->pathLen = strlen(filename);
           strcpy(packet->buffer, buffer);
-          strcpy(packet->filename, filename);
+          strcpy(packet->filename, _filename);
           while(!ack){
             int preturn = sendMessageClient(packet);
             if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
