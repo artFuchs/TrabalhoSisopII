@@ -65,6 +65,8 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
                             break;
                         case ERASED:
                             cout << " erased" << endl;
+                            strcpy(filename, it->first.c_str());
+                            _clientSession.deleteFile(filename);
                             break;
                         }
                         // if (it->second.mod!=ERASED){

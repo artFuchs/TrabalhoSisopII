@@ -215,6 +215,13 @@ public:
       strcpy(packet->filename, filename);
       sendMessageClient(packet);
     }
+
+    void deleteFile(char filename[]){
+      std::shared_ptr<Packet> packet(new Packet);
+      packet->type = PacketType::DELETE;
+      strcpy(packet->filename, filename);
+      sendMessageClient(packet);
+    }
 };
 
 }

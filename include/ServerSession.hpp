@@ -98,7 +98,10 @@ public:
         } else if(packet->type == PacketType::DOWNLOAD){
           std::cout << "download" << std::endl;
           sendFile(packet->filename);
-        } else if(packet->type == PacketType::EXIT){
+        } else if (packet->type == PacketType::DELETE){
+          std::cout << "delete" << std::endl;
+          fileMgr.delete_file(string(packet->filename));
+        }else if(packet->type == PacketType::EXIT){
 
         }
     }
