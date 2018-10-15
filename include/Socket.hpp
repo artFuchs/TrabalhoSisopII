@@ -16,8 +16,9 @@
 #include <string.h>
 #include <vector>
 
-#define BUFFER_MAX_SIZE 256
+#define BUFFER_MAX_SIZE 1024
 #define FILENAME_MAX_SIZE   256
+#define GLOBAL_TOKEN "GLOBAL@"
 
 namespace dropbox{
 

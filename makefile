@@ -42,16 +42,16 @@ client: ${CLIENT_OBJS}
 
 ##################### Compilling source #####################
 
-${BIN_DIR}/mainServer.o: ${SRC_DIR}/mainServer.cpp
+${BIN_DIR}/mainServer.o: ${SRC_DIR}/mainServer.cpp ${BIN_DIR}/server.o
 	g++ -c ${SRC_DIR}/mainServer.cpp -o ${BIN_DIR}/mainServer.o ${CXXFLAGS} ${INCLUDE_FLAG}
 
-${BIN_DIR}/mainClient.o: ${SRC_DIR}/mainClient.cpp
+${BIN_DIR}/mainClient.o: ${SRC_DIR}/mainClient.cpp ${BIN_DIR}/client.o
 	g++ -c ${SRC_DIR}/mainClient.cpp -o ${BIN_DIR}/mainClient.o ${CXXFLAGS} ${INCLUDE_FLAG}
 
-${BIN_DIR}/server.o: ${SRC_DIR}/Server.cpp
+${BIN_DIR}/server.o: ${SRC_DIR}/Server.cpp ${INCLUDE_DIR}/ServerSession.hpp
 	g++ -c ${SRC_DIR}/Server.cpp -o ${BIN_DIR}/server.o ${CXXFLAGS} ${INCLUDE_FLAG}
 
-${BIN_DIR}/client.o: ${SRC_DIR}/Client.cpp
+${BIN_DIR}/client.o: ${SRC_DIR}/Client.cpp ${INCLUDE_DIR}/ClientSession.hpp
 	g++ -c ${SRC_DIR}/Client.cpp -o ${BIN_DIR}/client.o ${CXXFLAGS} ${INCLUDE_FLAG}
 
 ${BIN_DIR}/fileManager.o: ${SRC_DIR}/FileManager.cpp
