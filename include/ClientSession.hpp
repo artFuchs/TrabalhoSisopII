@@ -22,11 +22,14 @@ class ClientSession : public Session<false>{
 private:
 
     std::thread _sendingThread;
+    std::thread _monitoringThread; // thread that will monitor the folder;
+
     std::mutex _modifyingDirectory;
+
     uint32_t _packetNum;
     bool _running;
     bool _loggedIn;
-    FileManager fileMgr;
+    FileMonitor fileMgr;
 
 public:
 
@@ -97,6 +100,55 @@ public:
                 //std::cout << "Woke up!" << std::endl;
             }
         });
+
+        _monitoringThread = std::thread([&]{
+            if (!fileMgr.is_valid())
+            {
+                throw std::runtime_error("couldn't find nor create sync directory ");
+            }
+            else
+            {
+                while(_running){
+                    std::lock_guard<std::mutex> lck(_modifyingDirectory);
+                    map<std::string, FILE_MOD_t> m;
+                    m = fileMgr.diff_dir();
+                    if (!m.empty())
+                    {
+                        std::cout << "CHANGES!" << endl;
+                        for (auto it = m.begin(); it!=m.end(); it++)
+                        {
+                            char filename[FILENAME_MAX_SIZE];
+                            std::cout << it->first;
+                            switch (it->second.mod){
+                            case MOVED:
+                                std::cout << " moved/created" << std::endl;
+                                strcpy(filename, it->first.c_str());
+                                uploadFile(filename);
+                                break;
+                            case MODIFIED:
+                                std::cout << " modified" << std::endl;
+                                strcpy(filename, it->first.c_str());
+                                uploadFile(filename);
+                                break;
+                            case ERASED:
+                                std::cout << " erased" << std::endl;
+                                strcpy(filename, it->first.c_str());
+                                deleteFile(filename);
+                                break;
+                            }
+                            // if (it->second.mod!=ERASED){
+                            //     cout << "\t tamanho: " << it->second.file_stat.st_size << endl;
+                            //     cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
+                            //     cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
+                            //     cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
+                            // }
+                        }
+                        std::cout << std::endl;
+                    }
+                    sleep(3);
+                }
+            }
+        });
     }
 
     void stop(void){
@@ -106,6 +158,10 @@ public:
 
         if(_sendingThread.joinable()){
             _sendingThread.join();
+        }
+
+        if(_monitoringThread.joinable()){
+            _monitoringThread.join();
         }
     }
 
@@ -117,7 +173,7 @@ public:
           uint part = packet->fragmentNum;
           uint total = packet->totalFragments;
           double percent = 100*(((double)part+1)/(double)total);
-          std::cout << "Received: " << file << " (" << part << " / " << total-1 << ") - " << percent << "%" << std::endl;
+          std::cout << "Received: " << file << " (" << part+1 << " / " << total << ") - " << percent << "%" << std::endl;
           //std::cout << "Received: " << message << "Sending back the message..." << std::endl;
           downloadFile(packet);
           _packetNum++;
@@ -176,6 +232,7 @@ public:
           readFile = true;
         }
       }
+      return true;
     }
 
 
@@ -194,19 +251,20 @@ public:
     }
 
     void downloadFile(std::shared_ptr<Packet> packet){
-      std::string message(packet->buffer, packet->bufferLen);
+      std::lock_guard<std::mutex> lck(_modifyingDirectory);
 
+      std::string message(packet->buffer, packet->bufferLen);
       std::string filename = parsePath(packet->filename);
 
       std::ofstream f;
-
       if (packet->fragmentNum == 0)
         f.open(filename);
       else
         f.open(filename, std::fstream::app);
-
       f << message;
       f.close();
+
+      fileMgr.read_dir();
     }
 
     void requestDownload(char filename[FILENAME_MAX_SIZE]){

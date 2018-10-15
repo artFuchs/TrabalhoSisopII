@@ -34,8 +34,18 @@ public:
     }
 
     void onAnotherSessionMessage(std::shared_ptr<Packet> packet){
-        std::string message(packet->buffer, packet->bufferLen);
-        std::cout << "Another client sent me: " << message << std::endl;
+        //std::string message(packet->buffer, packet->bufferLen);
+        //std::cout << "Another client sent me: " << message << std::endl;
+        if (packet->type == PacketType::DATA)
+        {
+          //send packet to client
+          bool ack = false;
+          while(!ack){
+            int preturn = sendMessageServer(packet);
+            if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
+            ack = waitAck(packet->packetNum);
+          }
+        }
     }
 
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
@@ -84,7 +94,7 @@ public:
                 bool ack = false;
                 while(!ack){
                   int preturn = sendMessageServer(packet);
-                  if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+                  if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
                   ack = waitAck(packet->packetNum);
                 }
                 _packetNum++;
