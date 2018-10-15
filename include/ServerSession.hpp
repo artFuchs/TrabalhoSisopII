@@ -7,7 +7,7 @@
 #include "Session.hpp"
 #include "SessionSupervisor.hpp"
 #include "FileManager.hpp"
-#define BUFFER_MAX_SIZE 256
+//#define BUFFER_MAX_SIZE 256
 
 namespace dropbox{
 
@@ -61,12 +61,15 @@ public:
             std::string directory = std::string("./") + std::string(packet->buffer);
             fileMgr.check_dir(directory);
             if (fileMgr.is_valid()){
-                /* TODO: create a login return message
-                  this login return message must tell the client if it
-                  successfully logged in */
+                /* TODO: send a negative login message
+                          in case therer are already two sessions to the
+                          same client */
+
                 // sendMessageServer();
                 // std::cout << "Login return sent!" << std::endl;
 
+
+                //send the files in the user folder
                 map<string, STAT_t> files;
                 files = fileMgr.read_dir();
                 for (auto file = files.begin(); file != files.end(); file++)
@@ -75,6 +78,16 @@ public:
                   strcpy(fname,file->first.c_str());
                   sendFile(fname);
                 }
+
+                // sends a positive login message
+                // just return the packet
+                bool ack = false;
+                while(!ack){
+                  int preturn = sendMessageServer(packet);
+                  if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+                  ack = waitAck(packet->packetNum);
+                }
+                _packetNum++;
             }
             else {
                 std::cout << "Error opening/creating the user directory " << directory << std::endl;
@@ -91,11 +104,11 @@ public:
     }
 
     std::string parsePath(char filename[FILENAME_MAX_SIZE]){
-      //check if filename init by "@LOCAL"
+      //check if filename init by GLOBAL_TOKEN
       std::string path(filename);
-      if (path.find("@LOCAL/") != std::string::npos){
-        //remove @LOCAL from string
-        path.erase(0,std::string("@LOCAL/").size());
+      if (path.find(GLOBAL_TOKEN) != std::string::npos){
+        //remove GLOBAL_TOKEN from string
+        path.erase(0,std::string(GLOBAL_TOKEN).size());
       }
       return path;
     }

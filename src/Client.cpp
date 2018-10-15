@@ -33,7 +33,6 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
     });
 
     _clientSession.connect(username);   // We need to be receiving messages before attempting to connect
-
     _monitoringThread = std::thread([&]{
         std::string dir_name = std::string("./sync_") + username;
         FileMonitor fm(dir_name);
@@ -97,12 +96,13 @@ void Client::stop(void){
 }
 
 void Client::upload(char filename[FILENAME_MAX_SIZE]){
+  std::cout << "upload signal send" << std::endl;
   _clientSession.uploadFile(filename);
 }
 
 void Client::download(char filename[]){
   char _filename[FILENAME_MAX_SIZE];
-  std::string fn = "@LOCAL/" + std::string(filename);
+  std::string fn = GLOBAL_TOKEN + std::string(filename);
   strcpy(_filename, fn.c_str());
   _clientSession.requestDownload(_filename);
 }
