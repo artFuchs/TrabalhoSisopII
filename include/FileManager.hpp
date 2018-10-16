@@ -71,6 +71,7 @@ public:
           retorno : int - 0 se a operação for concluida
                         < 0 se ocorrer erro
     */
+    int append_file(string, char[], uint);
     int append_file(string, string);
 
     /* create_file_part : cria um arquivo que é parte de outro arquivo

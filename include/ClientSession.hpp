@@ -182,6 +182,8 @@ public:
             std::cout << "deleting " << file << std::endl;
             fileMgr.delete_file(std::string(packet->filename));
             fileMgr.read_dir();
+        } else if (packet->type == PacketType::EXIT){
+            stop();
         } else{
             std::cout << "ACK received " <<"\n";
         }
@@ -194,47 +196,52 @@ public:
 
         bool readFile = false;
         char buffer[BUFFER_MAX_SIZE];
-        FILE * file = fopen(filename, "r");
-        int currentFragment = 0;
+        ifstream file;
 
-
-        //check if file exists
-        if (!file){
-          std::cout << "No such file\n";
-          return false;
+        try {
+            file.open(filename, std::fstream::binary);
+        }catch (std::ifstream::failure e){
+            std::cout << "No such file\n";
+            return false;
         }
-        //get size
-        fseek(file, 0, SEEK_END);
-        int size = ftell(file);
-        fseek(file, 0, SEEK_SET);
 
+        //get size
+        std::streampos begin, end;
+        begin = file.tellg();
+        file.seekg (0, ios::end);
+        end = file.tellg();
+        int size = end - begin;
+        file.seekg(0, ios::beg);
         double nFragments = double(size)/double(BUFFER_MAX_SIZE);
-        int ceiledFragments = ceil(nFragments);
+        uint ceiledFragments = ceil(nFragments);
+        uint currentFragment = 0;
 
         while(!readFile){
-          int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
-          if (amountRead > 0){
-            bool ack = false;
-            std::shared_ptr<Packet> packet(new Packet);
-            packet->type = PacketType::DATA;
-            packet->packetNum = _packetNum;
-            packet->fragmentNum = currentFragment;
-            packet->totalFragments = ceiledFragments;
-            packet->bufferLen = amountRead;
-            packet->pathLen = strlen(filename);
-            strcpy(packet->buffer, buffer);
-            strcpy(packet->filename, _filename);
-            while(!ack){
-              int preturn = sendMessageClient(packet);
-              if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
-              ack = waitAck(packet->packetNum);
+            file.read(buffer, BUFFER_MAX_SIZE);
+            if (file.gcount() > 0)
+            {
+                bool ack = false;
+                std::shared_ptr<Packet> packet(new Packet);
+                packet->type = PacketType::DATA;
+                packet->packetNum = _packetNum;
+                packet->fragmentNum = currentFragment;
+                packet->totalFragments = ceiledFragments;
+                packet->bufferLen = file.gcount();
+                packet->pathLen = strlen(filename);
+                memcpy(packet->buffer, buffer, file.gcount());
+                strcpy(packet->filename, _filename);
+                while(!ack){
+                    int preturn = sendMessageClient(packet);
+                    if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+                    ack = waitAck(packet->packetNum);
+                }
+                _packetNum++;
+                currentFragment++;
+            } else{
+                readFile = true;
             }
-            _packetNum++;
-            currentFragment++;
-          } else {
-            readFile = true;
-          }
         }
+
         return true;
     }
 
@@ -257,16 +264,22 @@ public:
         std::lock_guard<std::mutex> lck(_modifyingDirectory);
         //std::cout << "download" << std::endl;
 
-        std::string message(packet->buffer, packet->bufferLen);
+        //std::string message(packet->buffer, packet->bufferLen);
         std::string filename = parsePath(packet->filename);
 
         std::ofstream f;
         if (packet->fragmentNum == 0)
-          f.open(filename);
+        {
+          f.open(filename, std::fstream::binary);
+          f.write(packet->buffer, packet->bufferLen);
+          f.close();
+        }
         else
-          f.open(filename, std::fstream::app);
-        f << message;
-        f.close();
+        {
+          f.open(filename, std::fstream::binary | std::fstream::app);
+          f.write(packet->buffer, packet->bufferLen);
+          f.close();
+        }
 
         fileMgr.read_dir();
     }

@@ -36,7 +36,6 @@ public:
 
     void removeSession(std::string address){
         std::lock_guard<std::mutex> lck(_mutex);
-        std::cout << "removing session " << address << std::endl;
         auto it = _sessions.find(address);
         if(it != _sessions.end()){
             _sessions.erase(it);

@@ -87,7 +87,7 @@ int FileManager::create_file(string name, char contents[], uint max_size){
     ofstream outFile;
     string fpath = path+name;
     try{
-        outFile.open(fpath);
+        outFile.open(fpath, fstream::binary);
         outFile.write(contents,max_size);
         outFile.close();
     } catch (std::ifstream::failure e){
@@ -109,11 +109,24 @@ int FileManager::create_file(string name, string contents){
     return 0;
 }
 
+int FileManager::append_file(string name, char contents[], uint max_size){
+    ofstream outFile;
+    string fpath = path+name;
+    try{
+        outFile.open(fpath, fstream::app | fstream::binary);
+        outFile.write(contents,max_size);
+        outFile.close();
+    } catch (std::ifstream::failure e){
+        return -1;
+    }
+    return 0;
+}
+
 int FileManager::append_file(string name, string content){
     ofstream outFile;
     string fpath = path+name;
     try{
-        outFile.open(fpath,fstream::app);
+        outFile.open(fpath,fstream::app | fstream::binary);
         outFile << content;
         outFile.close();
     } catch (std::ifstream::failure e){
@@ -199,9 +212,8 @@ uint FileManager::read_file(string name, char* buffer, uint n){
     ifstream *file = &opened_files[name];
 
     if (file){
-        file->read(buffer, n-1);
+        file->read(buffer, n);
         uint read = file->gcount();
-        buffer[read] = '\0';
         if (file->eof()){
             file->close();
             opened_files.erase(name);

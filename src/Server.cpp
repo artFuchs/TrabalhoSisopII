@@ -11,7 +11,7 @@ Server::Server(int port) : _listenSocket(port){
 
 void Server::run(int numberOfThreads){
     _running = true;
-    
+
     for(int i = 0; i < numberOfThreads; i++){
         _threadPool.push_back(std::thread([&] {
             while(_running){
@@ -27,11 +27,11 @@ void Server::run(int numberOfThreads){
                         _jobPool.erase(it);
                     }
                 }
-                
+
                 if(hasJob){
                     job.first->onSessionReadMessage(job.second);
                 }
-                
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         }));
@@ -74,7 +74,7 @@ void Server::run(int numberOfThreads){
                     // TODO: we should reject the connection
                 }
             }
-            
+
             {
                 std::lock_guard<std::mutex> lck(_jobPoolMutex);
                 _jobPool.push_back(std::make_pair(it->second, packet));

@@ -132,16 +132,15 @@ public:
     }
 
     void receiveFile(std::shared_ptr<Packet> packet){
-      //string fullPath = buildFullPath(packet->filename);
       std::string fname = parsePath(packet->filename);
-      std::string message(packet->buffer, packet->bufferLen);
+      //std::string message(packet->buffer, packet->bufferLen);
 
       if (fileMgr.is_valid()){
         if (packet->fragmentNum == 0){
           std::cout << "creating file " << fname << std::endl;
-          fileMgr.create_file(fname, message);
+          fileMgr.create_file(fname, packet->buffer, packet->bufferLen);
         } else
-          fileMgr.append_file(fname, message);
+          fileMgr.append_file(fname, packet->buffer, packet->bufferLen);
       } else{
         std::cout << "Sync directory is invalid" << std::endl;
       }
@@ -163,12 +162,11 @@ public:
         std::cout << "No such file" << std::endl;
         return false;
       }
-      int size = files[filename].st_size;
+      size_t size = files[filename].st_size;
       double nFragments = double(size)/double(BUFFER_MAX_SIZE);
-      int ceiledFragments = ceil(nFragments);
+      uint ceiledFragments = ceil(nFragments);
 
       while(!readFile){
-        //int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
         int amountRead = fileMgr.read_file(filename,buffer,BUFFER_MAX_SIZE);
         if (amountRead > 0){
           bool ack = false;
@@ -179,7 +177,7 @@ public:
           packet->totalFragments = ceiledFragments;
           packet->bufferLen = amountRead;
           packet->pathLen = strlen(filename);
-          strcpy(packet->buffer, buffer);
+          memcpy(packet->buffer, buffer, amountRead);
           strcpy(packet->filename, filename);
           while(!ack){
             int preturn = sendMessageServer(packet);
@@ -188,8 +186,6 @@ public:
           }
           _packetNum++;
           currentFragment++;
-        // } else {
-        //   readFile = true;
         }
         if (amountRead < BUFFER_MAX_SIZE-1) {
           readFile = true;
