@@ -36,14 +36,17 @@ public:
     void onAnotherSessionMessage(std::shared_ptr<Packet> packet){
         //std::string message(packet->buffer, packet->bufferLen);
         //std::cout << "Another client sent me: " << message << std::endl;
-        if (packet->type == PacketType::DATA || packet->type == PacketType::DELETE)
-        {
+        if (packet->type == PacketType::DATA){
+            if (packet->fragmentNum == packet->totalFragments-1)
+                sendFile(packet->filename);
+        }
+        else if (packet->type == PacketType::DELETE){
           //send packet to client
           bool ack = false;
           while(!ack){
-            int preturn = sendMessageServer(packet);
-            if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
-            ack = waitAck(packet->packetNum);
+              int preturn = sendMessageServer(packet);
+              if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
+              ack = waitAck(packet->packetNum);
           }
         }
         else if (packet->type == PacketType::EXIT)
@@ -104,7 +107,7 @@ public:
             }
 
         } else if(packet->type == PacketType::ACK){
-            std::cout << "Received an ACK!" << std::endl;
+            std::cout << "Received an ACK! " << packet->packetNum << std::endl;
         } else if(packet->type == PacketType::DOWNLOAD){
           std::cout << "download" << std::endl;
           sendFile(packet->filename);

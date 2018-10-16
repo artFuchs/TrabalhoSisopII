@@ -109,9 +109,15 @@ public:
             else
             {
                 while(_running){
-                    std::lock_guard<std::mutex> lck(_modifyingDirectory);
+
                     map<std::string, FILE_MOD_t> m;
-                    m = fileMgr.diff_dir();
+
+                    {
+                      std::lock_guard<std::mutex> lck(_modifyingDirectory);
+                      //std::cout<< "monitorando" << std::endl;
+                      m = fileMgr.diff_dir();
+                    }
+
                     if (!m.empty())
                     {
                         std::cout << "CHANGES!" << endl;
@@ -255,6 +261,7 @@ public:
 
     void downloadFile(std::shared_ptr<Packet> packet){
         std::lock_guard<std::mutex> lck(_modifyingDirectory);
+        //std::cout << "download" << std::endl;
 
         std::string message(packet->buffer, packet->bufferLen);
         std::string filename = parsePath(packet->filename);
