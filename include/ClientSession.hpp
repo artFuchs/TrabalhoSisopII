@@ -189,17 +189,26 @@ public:
         }
     }
 
+    std::string removePath(char filename[FILENAME_MAX_SIZE]){
+        std::string path(filename);
+        std::size_t last_bar = path.rfind("/");
+        if (last_bar!=std::string::npos){
+            path.erase(0,last_bar+1);
+        }
+        return path;
+    }
+
     bool uploadFile(char _filename[]){
-        std::string fname = parsePath(_filename);
-        char filename[FILENAME_MAX_SIZE];
-        strcpy(filename,fname.c_str());
+        std::string fname = removePath(_filename);
+        std::string fpath = parsePath(_filename);
+
 
         bool readFile = false;
         char buffer[BUFFER_MAX_SIZE];
         ifstream file;
 
         try {
-            file.open(filename, std::fstream::binary);
+            file.open(fpath, std::fstream::binary);
         }catch (std::ifstream::failure e){
             std::cout << "No such file\n";
             return false;
@@ -227,9 +236,9 @@ public:
                 packet->fragmentNum = currentFragment;
                 packet->totalFragments = ceiledFragments;
                 packet->bufferLen = file.gcount();
-                packet->pathLen = strlen(filename);
+                packet->pathLen = fname.size();
                 memcpy(packet->buffer, buffer, file.gcount());
-                strcpy(packet->filename, _filename);
+                strcpy(packet->filename, fname.c_str());
                 while(!ack){
                     int preturn = sendMessageClient(packet);
                     if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
