@@ -22,11 +22,14 @@ class ClientSession : public Session<false>{
 private:
 
     std::thread _sendingThread;
+    std::thread _monitoringThread; // thread that will monitor the folder;
+
     std::mutex _modifyingDirectory;
+
     uint32_t _packetNum;
     bool _running;
     bool _loggedIn;
-    FileManager fileMgr;
+    FileMonitor fileMgr;
 
 public:
 
@@ -97,6 +100,61 @@ public:
                 //std::cout << "Woke up!" << std::endl;
             }
         });
+
+        _monitoringThread = std::thread([&]{
+            if (!fileMgr.is_valid())
+            {
+                throw std::runtime_error("couldn't find nor create sync directory ");
+            }
+            else
+            {
+                while(_running){
+
+                    map<std::string, FILE_MOD_t> m;
+
+                    {
+                      std::lock_guard<std::mutex> lck(_modifyingDirectory);
+                      //std::cout<< "monitorando" << std::endl;
+                      m = fileMgr.diff_dir();
+                    }
+
+                    if (!m.empty())
+                    {
+                        std::cout << "CHANGES!" << endl;
+                        for (auto it = m.begin(); it!=m.end(); it++)
+                        {
+                            char filename[FILENAME_MAX_SIZE];
+                            std::cout << it->first;
+                            switch (it->second.mod){
+                            case MOVED:
+                                std::cout << " moved/created" << std::endl;
+                                strcpy(filename, it->first.c_str());
+                                uploadFile(filename);
+                                break;
+                            case MODIFIED:
+                                std::cout << " modified" << std::endl;
+                                strcpy(filename, it->first.c_str());
+                                uploadFile(filename);
+                                break;
+                            case ERASED:
+                                std::cout << " erased" << std::endl;
+                                strcpy(filename, it->first.c_str());
+                                deleteFile(filename);
+                                break;
+                            }
+                            // if (it->second.mod!=ERASED){
+                            //     cout << "\t tamanho: " << it->second.file_stat.st_size << endl;
+                            //     cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
+                            //     cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
+                            //     cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
+                            // }
+                        }
+                        std::cout << std::endl;
+                    }
+                    sleep(3);
+                }
+            }
+        });
     }
 
     void stop(void){
@@ -107,108 +165,134 @@ public:
         if(_sendingThread.joinable()){
             _sendingThread.join();
         }
+
+        if(_monitoringThread.joinable()){
+            _monitoringThread.join();
+        }
     }
 
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<false>::onSessionReadMessage(packet);    // Handles ACK
         if(packet->type == PacketType::DATA){
-          //std::string message(packet->buffer, packet->bufferLen);
-          std::string file(packet->filename, packet->pathLen);
-          uint part = packet->fragmentNum;
-          uint total = packet->totalFragments;
-          double percent = 100*(((double)part+1)/(double)total);
-          std::cout << "Received: " << file << " (" << part << " / " << total-1 << ") - " << percent << "%" << std::endl;
-          //std::cout << "Received: " << message << "Sending back the message..." << std::endl;
-          downloadFile(packet);
-          _packetNum++;
+            std::string file(packet->filename, packet->pathLen);
+            uint part = packet->fragmentNum;
+            uint total = packet->totalFragments;
+            double percent = 100*(((double)part+1)/(double)total);
+            std::cout << "Received: " << file << " (" << part+1 << " / " << total << ") - " << percent << "%" << std::endl;
+            downloadFile(packet);
+            _packetNum++;
         } else if (packet->type == PacketType::LOGIN){
-          _loggedIn = true;
+            _loggedIn = true;
+        } else if (packet->type == PacketType::DELETE){
+            std::string file(packet->filename, packet->pathLen);
+            std::cout << "deleting " << file << std::endl;
+            fileMgr.delete_file(std::string(packet->filename));
+            fileMgr.read_dir();
         } else{
-          std::cout << "ACK received " <<"\n";
+            std::cout << "ACK received " <<"\n";
         }
     }
 
-    bool uploadFile(char filename[FILENAME_MAX_SIZE]){
-      bool readFile = false;
-      char buffer[BUFFER_MAX_SIZE];
-      FILE * file = fopen(filename, "r");
-      int currentFragment = 0;
+    bool uploadFile(char _filename[]){
+        std::string fname = parsePath(_filename);
+        char filename[FILENAME_MAX_SIZE];
+        strcpy(filename,fname.c_str());
 
-      //check if file exists
-      if (!file){
-        std::cout << "No such file\n";
-        return false;
-      }
-      //get size
-      fseek(file, 0, SEEK_END);
-      int size = ftell(file);
-      fseek(file, 0, SEEK_SET);
+        bool readFile = false;
+        char buffer[BUFFER_MAX_SIZE];
+        FILE * file = fopen(filename, "r");
+        int currentFragment = 0;
 
-      double nFragments = double(size)/double(BUFFER_MAX_SIZE);
-      int ceiledFragments = ceil(nFragments);
 
-      while(!readFile){
-        int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
-        if (amountRead > 0){
-          bool ack = false;
-          std::shared_ptr<Packet> packet(new Packet);
-          packet->type = PacketType::DATA;
-          packet->packetNum = _packetNum;
-          packet->fragmentNum = currentFragment;
-          packet->totalFragments = ceiledFragments;
-          packet->bufferLen = amountRead;
-          packet->pathLen = strlen(filename);
-          strcpy(packet->buffer, buffer);
-          strcpy(packet->filename, filename);
-          while(!ack){
-            int preturn = sendMessageClient(packet);
-            if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
-            ack = waitAck(packet->packetNum);
-          }
-          _packetNum++;
-          currentFragment++;
-        } else {
-          readFile = true;
+        //check if file exists
+        if (!file){
+          std::cout << "No such file\n";
+          return false;
         }
-      }
+        //get size
+        fseek(file, 0, SEEK_END);
+        int size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+
+        double nFragments = double(size)/double(BUFFER_MAX_SIZE);
+        int ceiledFragments = ceil(nFragments);
+
+        while(!readFile){
+          int amountRead = fread(buffer, 1, BUFFER_MAX_SIZE, file);
+          if (amountRead > 0){
+            bool ack = false;
+            std::shared_ptr<Packet> packet(new Packet);
+            packet->type = PacketType::DATA;
+            packet->packetNum = _packetNum;
+            packet->fragmentNum = currentFragment;
+            packet->totalFragments = ceiledFragments;
+            packet->bufferLen = amountRead;
+            packet->pathLen = strlen(filename);
+            strcpy(packet->buffer, buffer);
+            strcpy(packet->filename, _filename);
+            while(!ack){
+              int preturn = sendMessageClient(packet);
+              if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+              ack = waitAck(packet->packetNum);
+            }
+            _packetNum++;
+            currentFragment++;
+          } else {
+            readFile = true;
+          }
+        }
+        return true;
     }
 
 
     std::string parsePath(char filename[FILENAME_MAX_SIZE]){
-      //check if filename init by GLOBAL_TOKEN
-      std::string path(filename);
-      if (path.find(GLOBAL_TOKEN) != std::string::npos){
-        //remove GLOBAL_TOKEN from string
-        path.erase(0,std::string(GLOBAL_TOKEN).size());
-      }
-      else
-      {
-        path = fileMgr.getPath() + path;
-      }
-      return path;
+        //check if filename init by GLOBAL_TOKEN
+        std::string path(filename);
+        if (path.find(GLOBAL_TOKEN) != std::string::npos){
+          //remove GLOBAL_TOKEN from string
+          path.erase(0,std::string(GLOBAL_TOKEN).size());
+        }
+        else
+        {
+          path = fileMgr.getPath() + path;
+        }
+        return path;
     }
 
     void downloadFile(std::shared_ptr<Packet> packet){
-      std::string message(packet->buffer, packet->bufferLen);
+        std::lock_guard<std::mutex> lck(_modifyingDirectory);
+        //std::cout << "download" << std::endl;
 
-      std::string filename = parsePath(packet->filename);
+        std::string message(packet->buffer, packet->bufferLen);
+        std::string filename = parsePath(packet->filename);
 
-      std::ofstream f;
+        std::ofstream f;
+        if (packet->fragmentNum == 0)
+          f.open(filename);
+        else
+          f.open(filename, std::fstream::app);
+        f << message;
+        f.close();
 
-      if (packet->fragmentNum == 0)
-        f.open(filename);
-      else
-        f.open(filename, std::fstream::app);
-
-      f << message;
-      f.close();
+        fileMgr.read_dir();
     }
 
     void requestDownload(char filename[FILENAME_MAX_SIZE]){
-      std::shared_ptr<Packet> packet(new Packet);
-      packet->type = PacketType::DOWNLOAD;
-      strcpy(packet->filename, filename);
-      sendMessageClient(packet);
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::DOWNLOAD;
+        packet->pathLen = strlen(filename);
+        strcpy(packet->filename, filename);
+        sendMessageClient(packet);
+    }
+
+    void deleteFile(char filename[FILENAME_MAX_SIZE]){
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::DELETE;
+        packet->packetNum = _packetNum;
+        packet->pathLen = strlen(filename);
+        _packetNum++;
+        strcpy(packet->filename, filename);
+        sendMessageClient(packet);
     }
 };
 

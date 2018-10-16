@@ -33,48 +33,7 @@ Client::Client(const char* username, const char* hostname, int port) : _listenSo
     });
 
     _clientSession.connect(username);   // We need to be receiving messages before attempting to connect
-    _monitoringThread = std::thread([&]{
-        std::string dir_name = std::string("./sync_") + username;
-        FileMonitor fm(dir_name);
-        if (!fm.is_valid())
-        {
-            throw std::runtime_error("couldn't find nor create sync directory ");
-        }
-        else
-        {
-            while(_running){
-                map<string, FILE_MOD_t> m;
-                m = fm.diff_dir();
-                if (!m.empty())
-                {
-                    cout << "CHANGES!" << endl;
-                    for (auto it = m.begin(); it!=m.end(); it++)
-                    {
-                        cout << it->first;
-                        switch (it->second.mod){
-                        case MOVED:
-                            cout << " moved/created" << endl;
-                            break;
-                        case MODIFIED:
-                            cout << " modified" << endl;
-                            break;
-                        case ERASED:
-                            cout << " erased" << endl;
-                            break;
-                        }
-                        if (it->second.mod!=ERASED){
-                            cout << "\t tamanho: " << it->second.file_stat.st_size << endl;
-                            cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
-                            cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
-                            cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
-                        }
-                    }
-                    cout << endl;
-                }
-                sleep(3);
-            }
-        }
-    });
+
 
     _clientSession.start();
 }
@@ -90,14 +49,15 @@ void Client::stop(void){
     if(_listeningThread.joinable()){
         _listeningThread.join();
     }
-    if(_monitoringThread.joinable()){
-        _monitoringThread.join();
-    }
+    
 }
 
 void Client::upload(char filename[FILENAME_MAX_SIZE]){
   std::cout << "upload signal send" << std::endl;
-  _clientSession.uploadFile(filename);
+  char _filename[FILENAME_MAX_SIZE];
+  std::string fn = GLOBAL_TOKEN + std::string(filename);
+  strcpy(_filename, fn.c_str());
+  _clientSession.uploadFile(_filename);
 }
 
 void Client::download(char filename[]){

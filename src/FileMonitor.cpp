@@ -5,13 +5,15 @@ namespace dropbox{
 
 FileMonitor::FileMonitor(string _path) : FileManager(_path){
     if (is_valid())
-    {
-        files = read_dir();
-    }
+        read_dir();
 }
 
+FileMonitor::FileMonitor() : FileManager(){}
 
-
+map<string, STAT_t> FileMonitor::read_dir(){
+    files = FileManager::read_dir();
+    return files;
+}
 
 // check for diferences in the directory
 map<string, FILE_MOD_t> FileMonitor::diff_dir(){

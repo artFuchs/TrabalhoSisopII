@@ -53,7 +53,7 @@ public:
                   arquivos contidos nele.
           retorno : arquivos do diretório - map<string, STAT_t>
     */
-    map<string, STAT_t> read_dir();
+    virtual map<string, STAT_t> read_dir();
 
     /* create_file : cria um arquivo
             parâmetros: name - string : nome do arquivo;

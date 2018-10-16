@@ -28,14 +28,16 @@ namespace PacketType{
         DATA,
         LOGIN,
         EXIT,
-        DOWNLOAD
+        DOWNLOAD,
+        DELETE
     };
 
     static constexpr const char* str[] = {
         "ACK",
         "DATA",
         "LOGIN",
-        "DOWNLOAD"
+        "DOWNLOAD",
+        "DELETE"
     };
 
 }
