@@ -36,6 +36,7 @@ namespace PacketType{
         "ACK",
         "DATA",
         "LOGIN",
+        "EXIT",
         "DOWNLOAD",
         "DELETE"
     };

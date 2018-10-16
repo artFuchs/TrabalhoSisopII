@@ -116,7 +116,8 @@ public:
           fileMgr.delete_file(string(packet->filename));
           _supervisor->sendPacket(_sessionAddress, packet);
         }else if(packet->type == PacketType::EXIT){
-          _supervisor->sendPacket(_sessionAddress, packet);
+          std::cout << "exit signal received" << std::endl;
+          _supervisor->removeSession(_sessionAddress);
         }
     }
 

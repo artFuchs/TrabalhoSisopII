@@ -46,10 +46,12 @@ void Client::stop(void){
     _running = false;
     _connected = false;
 
+    _clientSession.exit();
+
     if(_listeningThread.joinable()){
         _listeningThread.join();
     }
-    
+
 }
 
 void Client::upload(char filename[FILENAME_MAX_SIZE]){

@@ -142,12 +142,6 @@ public:
                                 deleteFile(filename);
                                 break;
                             }
-                            // if (it->second.mod!=ERASED){
-                            //     cout << "\t tamanho: " << it->second.file_stat.st_size << endl;
-                            //     cout << "\t mtime:" << ctime(&it->second.file_stat.st_mtime);
-                            //     cout << "\t atime:" << ctime(&it->second.file_stat.st_atime);
-                            //     cout << "\t ctime:" << ctime(&it->second.file_stat.st_ctime);
-                            // }
                         }
                         std::cout << std::endl;
                     }
@@ -293,6 +287,20 @@ public:
         _packetNum++;
         strcpy(packet->filename, filename);
         sendMessageClient(packet);
+    }
+
+    void exit(){
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::EXIT;
+        packet->packetNum = _packetNum;
+        _packetNum++;
+        bool ack = false;
+        while (!ack)
+        {
+            sendMessageClient(packet);
+            ack = waitAck(packet->packetNum);
+        }
+        stop();
     }
 };
 
