@@ -72,10 +72,7 @@ void Client::download(char filename[]){
 }
 
 void Client::deleteFile(char filename[]){
-  char _filename[FILENAME_MAX_SIZE];
-  std::string fn = GLOBAL_TOKEN + std::string(filename);
-  strcpy(_filename, fn.c_str());
-  _clientSession.deleteFile(_filename);
+  _clientSession.deleteFile(filename);
 }
 
 void Client::listSrv(){

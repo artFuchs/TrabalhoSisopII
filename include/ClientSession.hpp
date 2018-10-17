@@ -115,7 +115,6 @@ public:
 
                     {
                       std::lock_guard<std::mutex> lck(_modifyingDirectory);
-                      //std::cout<< "monitorando" << std::endl;
                       m = fileMgr.diff_dir();
                     }
 
@@ -180,6 +179,7 @@ public:
             _loggedIn = true;
         } else if (packet->type == PacketType::DELETE){
             std::string file(packet->filename, packet->pathLen);
+            std::lock_guard<std::mutex> lck(_modifyingDirectory);
             std::cout << "deleting " << file << std::endl;
             fileMgr.delete_file(std::string(packet->filename));
             fileMgr.read_dir();
@@ -283,7 +283,7 @@ public:
         if (filename == last_file && last_piece == packet->fragmentNum){
           return;
         }
-        last_file = filename;
+        last_file = packefilename;
         last_piece = packet->fragmentNum;
 
         std::ofstream f;
