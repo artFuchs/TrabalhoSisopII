@@ -70,8 +70,6 @@ void Server::run(int numberOfThreads){
                     _serverSessions.insert(std::make_pair(clientAddress, newSession));
                     supervisor->addSession(std::make_pair(clientAddress, newSession));
                     it = _serverSessions.find(clientAddress);
-                } else{
-                    // TODO: we should reject the connection
                 }
             }
 
@@ -92,7 +90,6 @@ void Server::stop(void){
 
     // Join with the thread that waits for new connections
     if(_listenConnectionsThread.joinable()) _listenConnectionsThread.join();
-    // TODO: join with _threadPool threads
 }
 
 

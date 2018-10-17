@@ -20,8 +20,6 @@ namespace dropbox{
 class ClientSession : public Session<false>{
 
 private:
-
-    std::thread _sendingThread;
     std::thread _monitoringThread; // thread that will monitor the folder;
 
     std::mutex _modifyingDirectory;
@@ -82,26 +80,6 @@ public:
     void start(void){
         _running = true;
 
-        _sendingThread = std::thread([&] {
-            while(_running){
-                //std::string message = "ping";
-                //std::shared_ptr<Packet> packet(new Packet);
-                //bzero(packet->buffer, BUFFER_MAX_SIZE);
-                //packet->bufferLen = message.size();
-                //memcpy(static_cast<void*>(packet->buffer), static_cast<const void*>(message.c_str()), message.size());
-                //std::cout << "Sending message..." << std::endl;
-                //int preturn = sendMessageClient(packet);
-                //if(preturn < 0){
-                //    std::cout << "Error upon sending message to server " << preturn << std::endl;
-                //} else{
-                //    std::cout << "Message successfully sent!" << std::endl;
-                //}
-                //std::cout << "Sleeping for 2 seconds..." << std::endl;
-                //std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-                //std::cout << "Woke up!" << std::endl;
-            }
-        });
-
         _monitoringThread = std::thread([&]{
             if (!fileMgr.is_valid())
             {
@@ -153,12 +131,6 @@ public:
 
     void stop(void){
         _running = false;
-
-        //send EXIT message to server
-
-        if(_sendingThread.joinable()){
-            _sendingThread.join();
-        }
 
         if(_monitoringThread.joinable()){
             _monitoringThread.join();
@@ -248,6 +220,8 @@ public:
             }
         }
 
+        std::cout << "file succesfully sent to server" << std::endl;
+
         return true;
     }
 
@@ -268,9 +242,6 @@ public:
 
     void downloadFile(std::shared_ptr<Packet> packet){
         std::lock_guard<std::mutex> lck(_modifyingDirectory);
-        //std::cout << "download" << std::endl;
-
-        //std::string message(packet->buffer, packet->bufferLen);
         static std::string last_file;
         static int last_piece = 0;
 
@@ -309,7 +280,7 @@ public:
 
     void deleteFile(char filename[FILENAME_MAX_SIZE]){
         std::lock_guard<std::mutex> lck(_modifyingDirectory);
-        std::cout << "deleting " << filename << std::endl;
+        //std::cout << "deleting " << filename << std::endl;
         fileMgr.delete_file(std::string(filename));
         fileMgr.read_dir();
     }

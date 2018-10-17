@@ -22,7 +22,6 @@ typedef struct stat STAT_t; // representa um arquivo
 class FileManager{
 private:
     bool valid;
-    map<string, vector<string> > file_pieces;
     map<string,ifstream> opened_files;
 protected:
     string path; // caminho para o diretório - pode ser relativo
@@ -35,17 +34,17 @@ public:
                     se o diretório não existir, cria ele.
                     se ocorrer algum erro, configura a flag valid para false.
                     c.c., configura a flag valid para true;
-            parâmetros : path - string : caminho do diretório
+          parâmetros : path - string : caminho do diretório
     */
     void check_dir(string);
 
+    /* getPath : retorna o caminho do diretório atual */
     string getPath(){
       return path;
     }
 
-    /*
-        is_valid: informa se o FileMonitor foi iniciado corretamente
-            retorno: valid - bool : se é valido (true) ou não (false)
+    /* is_valid: informa se o FileMonitor foi iniciado corretamente
+          retorno: valid - bool : se é valido (true) ou não (false)
     */
     bool is_valid();
 
@@ -63,42 +62,15 @@ public:
                             <0 se ocorreu erro
     */
     int create_file(string, char[], uint);
-    int create_file(string, string);
 
     /* append_file : apende dados de um buffer em um arquivo
           parâmetros : name - string : nome do arquivo a ser continuado;
-                        contents - string : conteúdo a ser adicionado ao arquivo;
+                        contents - char[]: buffer contendo dados a serem adicionados ao arquivo;
+                        max_size - uint : tamanho do buffer contents
           retorno : int - 0 se a operação for concluida
                         < 0 se ocorrer erro
     */
     int append_file(string, char[], uint);
-    int append_file(string, string);
-
-    /* create_file_part : cria um arquivo que é parte de outro arquivo
-            parâmetros: name - string : nome da parte do arquivo;
-                        buffer - char[] : conteúdo do arquivo;
-                        max_size - uint : tamanho limite do buffer;
-                        part - int : qual parte do arquivo está sendo criada;
-                        total - int : total de partes a serem criadas - deve ser chamado na primeira chamada do método para o arquivo
-            retorno : int - 0 se a operação for concluida
-                           <0 se ocorreu erro
-    */
-    int create_file_part(string, char[], uint, int, int);
-
-    /* join_files : junta diversas partes de um arquivo
-            parâmetros : name - string : nome do arquivo
-            retorno : int - 0 se a operação for concluida
-                           <0 se ocorreu erro
-    */
-    int join_files(string);
-
-    /* clean_parts : deleta as partes do arquivo que foram criadas
-            parâmetros : name - string : nome do arquivo a que as partes se referem
-            retorno : int - 0 se a operação for concluida
-                           <0 se ocorreu erro
-
-    */
-    int clean_parts(string);
 
     /* delete_file : deleta um arquivo
             parâmetros : name - string : nome do arquivo a ser deletado

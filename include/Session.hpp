@@ -23,7 +23,7 @@ private:
     bool checkAck(uint32_t packetNum){
         for(auto it = _receivedAcks.begin(); it != _receivedAcks.end(); it++){
             if(*it == packetNum){
-              std::cout << *it << "\n";
+                //std::cout << *it << "\n";
                 _receivedAcks.erase(it);
                 return true;
             }
@@ -34,7 +34,6 @@ private:
 
 protected:
 
-    // TODO: Verify average time to receive an ACK to initially wait for that period
     bool waitAck(uint32_t packetNum, std::chrono::milliseconds totalSleepTime = std::chrono::milliseconds(1000)){
         const std::chrono::milliseconds sleepTime = std::chrono::milliseconds(10);
         bool receivedAck = false;
