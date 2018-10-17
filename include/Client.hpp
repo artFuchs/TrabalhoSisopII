@@ -14,7 +14,7 @@ private:
     UDPSocket _listenSocket;
     ClientSession _clientSession;
     std::thread _listeningThread;
-    
+
     bool _running;
     bool _connected;
 
@@ -30,6 +30,15 @@ public:
 
     void download(char filename[FILENAME_MAX_SIZE]);
 
+    void deleteFile(char filename[FILENAME_MAX_SIZE]);
+
+    void exitSession();
+
+    void getSyncDir();
+
+    void listCli();
+
+    void listSrv();
 };
 
 }

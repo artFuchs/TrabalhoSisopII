@@ -30,6 +30,7 @@ private:
     bool _running;
     bool _loggedIn;
     FileMonitor fileMgr;
+    char* user = (char*)malloc(sizeof(char)*FILENAME_MAX_SIZE);
 
 public:
 
@@ -44,7 +45,7 @@ public:
 
     void connect(const char* username){
         std::string message = username;
-
+        strcpy(user, username);
         fileMgr.check_dir(string("./sync_") + username);
         if (!fileMgr.is_valid())
             throw std::runtime_error("couldn't find nor create sync directory ");
@@ -311,7 +312,7 @@ public:
         sendMessageClient(packet);
     }
 
-    void exit(){
+    void exitSession(){
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::EXIT;
         packet->packetNum = _packetNum;
@@ -323,6 +324,48 @@ public:
             ack = waitAck(packet->packetNum);
         }
         stop();
+    }
+
+    void getSyncDir(){
+      fileMgr.check_dir(string("./sync_") + user);
+      if (!fileMgr.is_valid())
+          throw std::runtime_error("couldn't find nor create sync directory ");
+    }
+
+    void listClient(){
+      if (fileMgr.is_valid()){
+          map<string, STAT_t> files;
+          files = fileMgr.read_dir();
+          for (auto file = files.begin(); file != files.end(); file++)
+          {
+            char fname[FILENAME_MAX_SIZE];
+            strcpy(fname,file->first.c_str());
+            std::cout << "nome: " << fname << "\n";
+            cout << "\t tamanho: " << file->second.st_size << endl;
+            cout << "\t mtime:" << ctime(&file->second.st_mtime);
+            cout << "\t atime:" << ctime(&file->second.st_atime);
+            cout << "\t ctime:" << ctime(&file->second.st_ctime);
+          }
+      }
+    }
+
+    void listServer(){
+      FileMonitor svrMgr;
+      svrMgr.check_dir(user);
+      if (svrMgr.is_valid()){
+          map<string, STAT_t> files;
+          files = svrMgr.read_dir();
+          for (auto file = files.begin(); file != files.end(); file++)
+          {
+            char fname[FILENAME_MAX_SIZE];
+            strcpy(fname,file->first.c_str());
+            std::cout << "nome: " << fname << "\n";
+            cout << "\t tamanho: " << file->second.st_size << endl;
+            cout << "\t mtime:" << ctime(&file->second.st_mtime);
+            cout << "\t atime:" << ctime(&file->second.st_atime);
+            cout << "\t ctime:" << ctime(&file->second.st_ctime);
+          }
+      }
     }
 };
 
