@@ -139,7 +139,7 @@ public:
                             case ERASED:
                                 std::cout << " erased" << std::endl;
                                 strcpy(filename, it->first.c_str());
-                                deleteFile(filename);
+                                requestDelete(filename);
                                 break;
                             }
                         }
@@ -178,15 +178,11 @@ public:
         } else if (packet->type == PacketType::LOGIN){
             _loggedIn = true;
         } else if (packet->type == PacketType::DELETE){
-            std::string file(packet->filename, packet->pathLen);
-            std::lock_guard<std::mutex> lck(_modifyingDirectory);
-            std::cout << "deleting " << file << std::endl;
-            fileMgr.delete_file(std::string(packet->filename));
-            fileMgr.read_dir();
+            deleteFile(packet->filename);
         } else if (packet->type == PacketType::EXIT){
             stop();
         } else{
-            std::cout << "ACK received " <<"\n";
+            // std::cout << "ACK received " <<"\n";
         }
     }
 
@@ -312,6 +308,13 @@ public:
     }
 
     void deleteFile(char filename[FILENAME_MAX_SIZE]){
+        std::lock_guard<std::mutex> lck(_modifyingDirectory);
+        std::cout << "deleting " << filename << std::endl;
+        fileMgr.delete_file(std::string(filename));
+        fileMgr.read_dir();
+    }
+
+    void requestDelete(char filename[FILENAME_MAX_SIZE]){
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::DELETE;
         packet->packetNum = _packetNum;

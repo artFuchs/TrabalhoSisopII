@@ -73,6 +73,7 @@ void Client::download(char filename[]){
 
 void Client::deleteFile(char filename[]){
   _clientSession.deleteFile(filename);
+  _clientSession.requestDelete(filename);
 }
 
 void Client::listSrv(){
