@@ -280,7 +280,6 @@ public:
 
     void deleteFile(char filename[FILENAME_MAX_SIZE]){
         std::lock_guard<std::mutex> lck(_modifyingDirectory);
-        //std::cout << "deleting " << filename << std::endl;
         fileMgr.delete_file(std::string(filename));
         fileMgr.read_dir();
     }
