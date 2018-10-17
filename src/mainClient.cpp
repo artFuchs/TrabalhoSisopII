@@ -4,14 +4,22 @@
 #include "Client.hpp"
 #define PORT 4000
 
-int main(void){
-    
-    dropbox::Client client("username", "localhost", PORT);
+int main(int argc, char* argv[]){
+
+    if (argc != 4){
+      std::cout << "USO: " << std::endl;
+      std::cout << "./client <username> <server ip adress> <port>" << std::endl;
+      return 0;
+    }
+
+    int port = std::stoi(argv[3]);
+
+    dropbox::Client client(argv[1], argv[2], port);
     std::string cstr;
 
     char *token;
     char *arg;
-    
+
         client.start();
 
         while (1) {
@@ -44,7 +52,7 @@ int main(void){
                    client.getSyncDir();
              }
            }
-     
+
          }
 
 
