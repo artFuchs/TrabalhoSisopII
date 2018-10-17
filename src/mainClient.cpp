@@ -11,8 +11,8 @@ int main(void){
 
     client.start();
 
-    client.upload("/home/arthur/alo.txt");
-    //client.download("alo.txt");
+    //client.upload("/home/arthur/alo.txt");
+    client.download("alo.txt");
 
     std::cin >> dummy;
 

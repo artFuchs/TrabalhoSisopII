@@ -133,8 +133,6 @@ public:
 
     void receiveFile(std::shared_ptr<Packet> packet){
       std::string fname = parsePath(packet->filename);
-      //std::string message(packet->buffer, packet->bufferLen);
-
       if (fileMgr.is_valid()){
         if (packet->fragmentNum == 0){
           std::cout << "creating file " << fname << std::endl;
@@ -144,10 +142,11 @@ public:
       } else{
         std::cout << "Sync directory is invalid" << std::endl;
       }
-
     }
 
     bool sendFile(char filename[FILENAME_MAX_SIZE]){
+      std::string fname = parsePath(filename);
+
       bool readFile = false;
       char buffer[BUFFER_MAX_SIZE];
       int currentFragment = 0;
@@ -158,16 +157,16 @@ public:
       }
 
       map<std::string, STAT_t> files = fileMgr.read_dir();
-      if (files.find(filename)==files.end()){
+      if (files.find(fname)==files.end()){
         std::cout << "No such file" << std::endl;
         return false;
       }
-      size_t size = files[filename].st_size;
+      size_t size = files[fname].st_size;
       double nFragments = double(size)/double(BUFFER_MAX_SIZE);
       uint ceiledFragments = ceil(nFragments);
 
       while(!readFile){
-        int amountRead = fileMgr.read_file(filename,buffer,BUFFER_MAX_SIZE);
+        int amountRead = fileMgr.read_file(fname,buffer,BUFFER_MAX_SIZE);
         if (amountRead > 0){
           bool ack = false;
           std::shared_ptr<Packet> packet(new Packet);
