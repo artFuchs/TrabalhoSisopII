@@ -175,9 +175,9 @@ public:
           packet->fragmentNum = currentFragment;
           packet->totalFragments = ceiledFragments;
           packet->bufferLen = amountRead;
-          packet->pathLen = strlen(fname.c_str());
+          packet->pathLen = strlen(filename);
           memcpy(packet->buffer, buffer, amountRead);
-          strcpy(packet->filename, fname.c_str());
+          strcpy(packet->filename, filename);
           while(!ack){
             int preturn = sendMessageServer(packet);
             if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
