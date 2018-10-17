@@ -49,19 +49,12 @@ public:
               ack = waitAck(packet->packetNum);
           }
         }
-        else if (packet->type == PacketType::EXIT)
-        {
-          //detach other serverSession
-        }
     }
 
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet);    // Handles ACK
 
         if(packet->type == PacketType::DATA){
-            //std::string message(packet->buffer, packet->bufferLen);
-            //std::cout << "Received: " << message << "Sending back the message..." << std::endl;
-
             std::string file(packet->filename, packet->pathLen);
             uint part = packet->fragmentNum;
             uint total = packet->totalFragments;
@@ -78,10 +71,6 @@ public:
             std::string directory = std::string("./") + std::string(packet->buffer);
             fileMgr.check_dir(directory);
             if (fileMgr.is_valid()){
-                /* TODO: send a negative login message
-                          in case therer are already two sessions to the
-                          same client */
-
                 //send the files in the user folder
                 map<string, STAT_t> files;
                 files = fileMgr.read_dir();
@@ -132,7 +121,16 @@ public:
     }
 
     void receiveFile(std::shared_ptr<Packet> packet){
+      static std::string last_file;
+      static int last_piece = 0;
       std::string fname = parsePath(packet->filename);
+
+      if (filename == last_file && last_piece == packet->fragmentNum){
+        return;
+      }
+      last_file = filename;
+      last_piece = packet->fragmentNum;
+      
       if (fileMgr.is_valid()){
         if (packet->fragmentNum == 0){
           std::cout << "creating file " << fname << std::endl;

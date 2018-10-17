@@ -275,7 +275,16 @@ public:
         //std::cout << "download" << std::endl;
 
         //std::string message(packet->buffer, packet->bufferLen);
+        static std::string last_file;
+        static int last_piece = 0;
+
         std::string filename = parsePath(packet->filename);
+
+        if (filename == last_file && last_piece == packet->fragmentNum){
+          return;
+        }
+        last_file = filename;
+        last_piece = packet->fragmentNum;
 
         std::ofstream f;
         if (packet->fragmentNum == 0)
