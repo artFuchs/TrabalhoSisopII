@@ -283,7 +283,7 @@ public:
         if (filename == last_file && last_piece == packet->fragmentNum){
           return;
         }
-        last_file = packefilename;
+        last_file = filename;
         last_piece = packet->fragmentNum;
 
         std::ofstream f;
