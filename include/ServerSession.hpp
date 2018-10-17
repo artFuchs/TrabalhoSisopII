@@ -125,12 +125,12 @@ public:
       static int last_piece = 0;
       std::string fname = parsePath(packet->filename);
 
-      if (filename == last_file && last_piece == packet->fragmentNum){
+      if (fname == last_file && last_piece == packet->fragmentNum){
         return;
       }
-      last_file = filename;
+      last_file = fname;
       last_piece = packet->fragmentNum;
-      
+
       if (fileMgr.is_valid()){
         if (packet->fragmentNum == 0){
           std::cout << "creating file " << fname << std::endl;
