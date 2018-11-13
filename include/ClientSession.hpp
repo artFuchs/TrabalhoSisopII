@@ -208,6 +208,7 @@ public:
                 packet->pathLen = fname.size();
                 memcpy(packet->buffer, buffer, file.gcount());
                 strcpy(packet->filename, fname.c_str());
+
                 while(!ack){
                     int preturn = sendMessageClient(packet);
                     if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
@@ -243,15 +244,22 @@ public:
     void downloadFile(std::shared_ptr<Packet> packet){
         std::lock_guard<std::mutex> lck(_modifyingDirectory);
         static std::string last_file;
-        static int last_piece = 0;
+        static uint waited_piece = 0;
 
         std::string filename = parsePath(packet->filename);
 
-        if (filename == last_file && last_piece == packet->fragmentNum){
+        if (filename == last_file && waited_piece != packet->fragmentNum){
           return;
         }
-        last_file = filename;
-        last_piece = packet->fragmentNum;
+        if (filename != last_file)
+        {
+          last_file = filename;
+          waited_piece = 0;
+        }
+        waited_piece++;
+
+        if (waited_piece == packet->totalFragments)
+          waited_piece = 0;
 
         std::ofstream f;
         if (packet->fragmentNum == 0)

@@ -122,14 +122,24 @@ public:
 
     void receiveFile(std::shared_ptr<Packet> packet){
       static std::string last_file;
-      static int last_piece = 0;
+      static uint waited_piece = 0;
       std::string fname = parsePath(packet->filename);
 
-      if (fname == last_file && last_piece == packet->fragmentNum){
+      if (fname == last_file && waited_piece != packet->fragmentNum){
         return;
       }
-      last_file = fname;
-      last_piece = packet->fragmentNum;
+
+      if (fname != last_file)
+      {
+        last_file = fname;
+        waited_piece = 0;
+      }
+      waited_piece++;
+
+      if (waited_piece == packet->totalFragments)
+        waited_piece = 0;
+
+      
 
       if (fileMgr.is_valid()){
         if (packet->fragmentNum == 0){
