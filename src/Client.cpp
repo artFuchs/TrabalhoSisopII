@@ -77,7 +77,7 @@ void Client::deleteFile(char filename[]){
 }
 
 void Client::listSrv(){
-  _clientSession.listServer();
+  _clientSession.requestListServer();
 }
 
 void Client::listCli(){

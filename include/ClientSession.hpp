@@ -29,6 +29,7 @@ private:
     bool _loggedIn;
     FileMonitor fileMgr;
     char* user = (char*)malloc(sizeof(char)*FILENAME_MAX_SIZE);
+    map<string, STAT_t> serverFiles;
 
 public:
 
@@ -141,10 +142,10 @@ public:
         Session<false>::onSessionReadMessage(packet);    // Handles ACK
         if(packet->type == PacketType::DATA){
             std::string file(packet->filename, packet->pathLen);
-            uint part = packet->fragmentNum;
+            uint part = packet->fragmentNum + 1;
             uint total = packet->totalFragments;
-            double percent = 100*(((double)part+1)/(double)total);
-            std::cout << "Received: " << file << " (" << part+1 << " / " << total << ") - " << percent << "%" << std::endl;
+            double percent = 100*(((double)part)/(double)total);
+            std::cout << "Received: " << file << " (" << part << " / " << total << ") - " << percent << "%" << std::endl;
             downloadFile(packet);
             _packetNum++;
         } else if (packet->type == PacketType::LOGIN){
@@ -153,6 +154,12 @@ public:
             deleteFile(packet->filename);
         } else if (packet->type == PacketType::EXIT){
             stop();
+        } else if (packet->type == PacketType::LIST) {
+            uint part = packet->fragmentNum + 1;
+            uint total = packet->totalFragments;
+            double percent = 100*(((double)part)/(double)total);
+            std::cout << "Received part of server files listing: " << " (" << part << " / " << total << ") - " << percent << "%" << std::endl;
+            receiveServerFileInfo(packet);
         } else{
             // std::cout << "ACK received " <<"\n";
         }
@@ -328,33 +335,57 @@ public:
           files = fileMgr.read_dir();
           for (auto file = files.begin(); file != files.end(); file++)
           {
-            char fname[FILENAME_MAX_SIZE];
-            strcpy(fname,file->first.c_str());
-            std::cout << "nome: " << fname << "\n";
-            cout << "\t tamanho: " << file->second.st_size << endl;
-            cout << "\t mtime:" << ctime(&file->second.st_mtime);
-            cout << "\t atime:" << ctime(&file->second.st_atime);
-            cout << "\t ctime:" << ctime(&file->second.st_ctime);
+            std::cout << "nome: " << file->first << "\n";
+            std::cout << "\t tamanho: " << file->second.st_size << std::endl;
+            std::cout << "\t mtime:" << ctime(&file->second.st_mtime);
+            std::cout << "\t atime:" << ctime(&file->second.st_atime);
+            std::cout << "\t ctime:" << ctime(&file->second.st_ctime);
           }
       }
     }
 
-    void listServer(){
-      FileMonitor svrMgr;
-      svrMgr.check_dir(user);
-      if (svrMgr.is_valid()){
-          map<string, STAT_t> files;
-          files = svrMgr.read_dir();
-          for (auto file = files.begin(); file != files.end(); file++)
-          {
-            char fname[FILENAME_MAX_SIZE];
-            strcpy(fname,file->first.c_str());
-            std::cout << "nome: " << fname << "\n";
-            cout << "\t tamanho: " << file->second.st_size << endl;
-            cout << "\t mtime:" << ctime(&file->second.st_mtime);
-            cout << "\t atime:" << ctime(&file->second.st_atime);
-            cout << "\t ctime:" << ctime(&file->second.st_ctime);
-          }
+    void requestListServer(){
+      serverFiles.clear();
+      std::cout << "requesting server information" << std::endl;
+      std::shared_ptr<Packet> packet(new Packet);
+      packet->type = PacketType::LIST;
+      packet->packetNum = _packetNum;
+      _packetNum++;
+      bool ack = false;
+      while (!ack)
+      {
+          sendMessageClient(packet);
+          ack = waitAck(packet->packetNum);
+      }
+    }
+
+    void receiveServerFileInfo(std::shared_ptr<Packet> packet){
+      static uint waited_piece = 0;
+      if (packet->fragmentNum == waited_piece)
+      {
+        string fname(packet->filename,packet->pathLen);
+        STAT_t data;
+        memcpy(&data, packet->buffer, packet->bufferLen);
+        serverFiles[fname] = data;
+        waited_piece++;
+        if (waited_piece == packet->totalFragments)
+        {
+          std::cout << "terminated loading server files list." << std::endl;
+          waited_piece = 0;
+          ListServer();
+        }
+      }
+    }
+
+    void ListServer(){
+      cout << "listing server..." << endl;
+      for (auto file = serverFiles.begin(); file != serverFiles.end(); file++)
+      {
+        std::cout << "nome: " << file->first << "\n";
+        std::cout << "\t tamanho: " << file->second.st_size << std::endl;
+        std::cout << "\t mtime:" << ctime(&file->second.st_mtime);
+        std::cout << "\t atime:" << ctime(&file->second.st_atime);
+        std::cout << "\t ctime:" << ctime(&file->second.st_ctime);
       }
     }
 };

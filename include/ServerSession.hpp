@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <cstring>
+#include <sstream>
 #include "Session.hpp"
 #include "SessionSupervisor.hpp"
 #include "FileManager.hpp"
@@ -104,7 +105,10 @@ public:
           std::cout << "delete " << packet->filename << std::endl;
           fileMgr.delete_file(string(packet->filename));
           _supervisor->sendPacket(_sessionAddress, packet);
-        }else if(packet->type == PacketType::EXIT){
+        } else if(packet->type == PacketType::LIST){
+          std::cout << "listing server files..." << std::endl;
+          listFiles();
+        } else if(packet->type == PacketType::EXIT){
           std::cout << "exit signal received" << std::endl;
           _supervisor->removeSession(_sessionAddress);
         }
@@ -139,7 +143,7 @@ public:
       if (waited_piece == packet->totalFragments)
         waited_piece = 0;
 
-      
+
 
       if (fileMgr.is_valid()){
         if (packet->fragmentNum == 0){
@@ -201,6 +205,35 @@ public:
       return true;
     }
 
+    void listFiles(){
+      map<string, STAT_t> files;
+      files = fileMgr.read_dir();
+      int size = files.size();
+      uint i = 0;
+      auto it = files.begin();
+      while(i < size && it != files.end())
+      {
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->packetNum = _packetNum;
+        packet->type = PacketType::LIST;
+        packet->fragmentNum = i;
+        packet->totalFragments = size;
+        packet->pathLen = it->first.size();
+        memcpy(packet->filename, it->first.c_str(), packet->pathLen);
+        packet->bufferLen = sizeof(STAT_t);
+        memcpy(packet->buffer, &it->second, packet->bufferLen);
+        bool ack = false;
+        while(!ack){
+          cout << "sending part " << i << endl;
+          int preturn = sendMessageServer(packet);
+          if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+          ack = waitAck(packet->packetNum);
+        }
+        _packetNum++;
+        i++;
+        it++;
+      }
+    }
 
 };
 

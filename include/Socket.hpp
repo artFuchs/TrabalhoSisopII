@@ -29,7 +29,8 @@ namespace PacketType{
         LOGIN,
         EXIT,
         DOWNLOAD,
-        DELETE
+        DELETE,
+        LIST
     };
 
     static constexpr const char* str[] = {
@@ -38,7 +39,8 @@ namespace PacketType{
         "LOGIN",
         "EXIT",
         "DOWNLOAD",
-        "DELETE"
+        "DELETE",
+        "LIST"
     };
 
 }
