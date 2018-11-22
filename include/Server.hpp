@@ -6,10 +6,12 @@
 #include <map>
 
 #include "ServerSession.hpp"
+#include "RMSession.hpp"
 
 namespace dropbox{
 
 typedef std::pair<std::shared_ptr<ServerSession>, std::shared_ptr<Packet>> ServerJob;
+typedef std::pair<std::shared_ptr<RMSession>, std::shared_ptr<Packet>> RMJob;
 
 ///
 /// \brief Server is the class that waits for connections with new clients and launches ServerSessions for them
@@ -29,11 +31,15 @@ private:
     std::map<std::string, std::shared_ptr<SessionSupervisor<ServerSession>>> _serverSessionsByUsername;
     //std::mutex _ssByUsernameMutex; // Useful if we want to add another thread to receive new messages
 
+    UDPSocket _listenRMSocket;
+    bool _primary;
+
     int _port;
+    int _RMport;
     bool _running;
 
 public:
-    Server(int port);
+    Server(int port, int RMport, bool primary = true);
 
     void run(int numberOfThreads = 4);
     void stop(void);

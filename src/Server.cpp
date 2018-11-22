@@ -4,8 +4,10 @@
 
 namespace dropbox{
 
-Server::Server(int port) : _listenSocket(port){
+Server::Server(int port, int RMport, bool primary) : _listenSocket(port), _listenRMSocket(RMport){
     _port = port;
+    _RMport = RMport;
+    _primary = primary;
     _running = false;
 }
 
