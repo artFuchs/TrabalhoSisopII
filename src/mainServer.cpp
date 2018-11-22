@@ -4,9 +4,10 @@
 #include "Server.hpp"
 
 #define PORT 4000
+#define RMPORT 4001
 
 int main(void){
-    dropbox::Server server(PORT);
+    dropbox::Server server(PORT, RMPORT);
     std::string dummy;
 
     server.run();
@@ -18,4 +19,3 @@ int main(void){
 
     return 0;
 }
-

@@ -6,6 +6,7 @@
 #include <map>
 
 #include "ServerSession.hpp"
+#include "RMSession.hpp"
 
 namespace dropbox{
 

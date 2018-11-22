@@ -8,7 +8,7 @@ class RMSession : public Session<true>{
 private:
     uint32_t _packetNum;
     int id;
-    std::string _sessionAddress
+    std::string _sessionAddress;
 
 public:
     RMSession(std::string& sessionAddress, UDPSocket& socket) :
@@ -29,8 +29,8 @@ public:
     }
 
 
-    
-}
+
+};
 
 
 }
