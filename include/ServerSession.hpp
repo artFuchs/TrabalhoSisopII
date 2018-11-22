@@ -8,7 +8,7 @@
 #include "Session.hpp"
 #include "SessionSupervisor.hpp"
 #include "FileManager.hpp"
-//#define BUFFER_MAX_SIZE 256
+
 
 namespace dropbox{
 
