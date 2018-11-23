@@ -31,6 +31,7 @@ private:
     std::map<std::string, std::shared_ptr<SessionSupervisor<ServerSession>>> _serverSessionsByUsername;
     //std::mutex _ssByUsernameMutex; // Useful if we want to add another thread to receive new messages
 
+    std::thread _listemRMThread;
     UDPSocket _listenRMSocket;
     bool _primary;
 
@@ -38,8 +39,17 @@ private:
     int _RMport;
     bool _running;
 
+    // connection with primaryServer
+    int _priPort;
+    std::string _priIp;
+    RMSession _RMSession;
+
+
 public:
-    Server(int port, int RMport, bool primary = true);
+    //primary server constructor
+    Server(int port, int RMport);
+    //secondary server constructor
+    Server(int port, int RMport, std::string priIp, int priPort);
 
     void run(int numberOfThreads = 4);
     void stop(void);

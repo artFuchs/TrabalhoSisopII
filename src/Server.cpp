@@ -4,10 +4,19 @@
 
 namespace dropbox{
 
-Server::Server(int port, int RMport, bool primary) : _listenSocket(port), _listenRMSocket(RMport){
+Server::Server(int port, int RMport) : _listenSocket(port), _listenRMSocket(RMport), _RMSession(_listenSocket, true){
     _port = port;
     _RMport = RMport;
-    _primary = primary;
+    _primary = true;
+    _running = false;
+}
+
+Server::Server(int port, int RMport, std::string priIp, int priPort) :
+    _listenSocket(port), _listenRMSocket(priIp.data(), priPort), _priIp(priIp), _RMSession(_listenRMSocket, false){
+    _port = port;
+    _RMport = RMport;
+    _priPort = priPort;
+    _primary = false;
     _running = false;
 }
 
@@ -82,6 +91,29 @@ void Server::run(int numberOfThreads){
         }
     }
     );
+
+    _listemRMThread = std::thread([&]{
+        while (_running)
+        {
+            std::shared_ptr<Packet> packet(new Packet);
+            *packet = _listenRMSocket.read();
+
+            if (packet->type == PacketType::LOGIN)
+            {
+                cout << "received connection request" << endl;
+            }
+            else
+            {
+                cout << "received message: "  << endl;
+                cout << std::string(packet->buffer, packet->bufferLen) << endl;
+            }
+        }
+    });
+
+    if (!_primary){
+        _RMSession.setReceiverAddress(_listenRMSocket.getReadingAddress());
+        _RMSession.init_connection();
+    }
 }
 
 void Server::stop(void){

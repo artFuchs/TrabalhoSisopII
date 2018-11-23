@@ -2,7 +2,6 @@
 #include <string>
 
 #include "Client.hpp"
-#define PORT 4000
 
 int main(int argc, char* argv[]){
 
