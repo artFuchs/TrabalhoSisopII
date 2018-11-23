@@ -16,7 +16,7 @@ public:
         Session<true>(socket){
         _packetNum = 0;
         _id = 0;
-        _primary = 0;
+        _primary = primary;
         _connected = false;
     }
 
@@ -28,16 +28,22 @@ public:
         if (packet->type == PacketType::LOGIN)
         {
             if (_primary){
+              cout << "RM received connection request" << endl;
               init_connection();
             }
             else if (!_connected){
               _id = stoi(packet->buffer);
-              cout << "connection acomplished";
+              _connected = true;
+              cout << "RM connection acomplished" << endl;
             }
             else
             {
               //get other IPs
             }
+        }
+        else if (packet->type == PacketType::ACK)
+        {
+            cout << "RM received ACK: " << packet->packetNum << endl;
         }
 
     }
@@ -51,6 +57,7 @@ public:
         std::string id = std::to_string(_id);
         strcpy(packet->buffer, id.c_str());
         while(!ack){
+            cout << "Sending message" << endl;
             int preturn = sendMessageServer(packet);
             if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
             ack = waitAck(packet->packetNum);

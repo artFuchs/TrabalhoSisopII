@@ -4,11 +4,12 @@
 
 namespace dropbox{
 
-Server::Server(int port, int RMport) : _listenSocket(port), _listenRMSocket(RMport), _RMSession(_listenSocket, true){
+Server::Server(int port, int RMport) : _listenSocket(port), _listenRMSocket(RMport), _RMSession(_listenRMSocket, true){
     _port = port;
     _RMport = RMport;
     _primary = true;
     _running = false;
+    cout << "PORT: " << port << ", RMPORT: " << RMport << endl;
 }
 
 Server::Server(int port, int RMport, std::string priIp, int priPort) :
@@ -18,6 +19,7 @@ Server::Server(int port, int RMport, std::string priIp, int priPort) :
     _priPort = priPort;
     _primary = false;
     _running = false;
+    cout << "PORT: " << port << ", RMPORT: " << RMport << ", primary RM port: " << priPort << endl;
 }
 
 void Server::run(int numberOfThreads){
@@ -54,6 +56,8 @@ void Server::run(int numberOfThreads){
             // Receiving a new message
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _listenSocket.read();
+
+            cout << "RMs SHOULD NOT SEND MESSAGES TO THIS SOCKET" << endl;
 
             // If there was a problem while reading, it shuts down the connection
             if(packet->bufferLen < 0){
@@ -98,15 +102,8 @@ void Server::run(int numberOfThreads){
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _listenRMSocket.read();
 
-            if (packet->type == PacketType::LOGIN)
-            {
-                cout << "received connection request" << endl;
-            }
-            else
-            {
-                cout << "received message: "  << endl;
-                cout << std::string(packet->buffer, packet->bufferLen) << endl;
-            }
+            _RMSession.setReceiverAddress(_listenRMSocket.getReadingAddress());
+            _RMSession.onSessionReadMessage(packet);
         }
     });
 

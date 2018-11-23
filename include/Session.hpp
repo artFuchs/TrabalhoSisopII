@@ -74,6 +74,7 @@ public:
             ackPacket->type = PacketType::ACK;
             ackPacket->packetNum = packet->packetNum;
             if(isServer){
+                std::cout << "sending ACK" << std::endl;
                 sendMessageServer(ackPacket);
             } else{
                 sendMessageClient(ackPacket);
