@@ -63,6 +63,8 @@ struct Packet{
     uint16_t bufferLen;
     // Size of this particular Packet's filename
     uint16_t pathLen;
+    // used by Replica Managers only: sender id
+    int id;
 
     // Data itself
     char buffer[BUFFER_MAX_SIZE];

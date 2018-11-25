@@ -11,7 +11,7 @@ int main(int argc, char* argv[]){
 
     if (argc < 3){
         std::cout << "USO: " << std::endl;
-        std::cout << "./server <port> <RMport> [-S <IP> <port>]" << std::endl;
+        std::cout << "./server <port> <RMport> [-S <IP> <primary port>]" << std::endl;
     }
 
     else

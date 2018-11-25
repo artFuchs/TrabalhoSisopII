@@ -32,18 +32,22 @@ private:
     //std::mutex _ssByUsernameMutex; // Useful if we want to add another thread to receive new messages
 
     std::thread _listemRMThread;
-    UDPSocket _listenRMSocket;
-    bool _primary;
+    UDPSocket _listenSocketRM;
+    std::vector<std::thread> _threadPoolRM;
+    std::mutex _jobPoolMutexRM;
+    std::vector<RMJob> _jobPoolRM;
+    std::map<int, std::shared_ptr<RMSession>> _RMSessions;
 
     int _port;
     int _RMport;
     bool _running;
+    bool _primary;
+    int _id;  //server id
+    int _last_id;  //last given id
 
     // connection with primaryServer
     int _priPort;
     std::string _priIp;
-    RMSession _RMSession;
-
 
 public:
     //primary server constructor

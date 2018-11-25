@@ -4,21 +4,26 @@
 
 namespace dropbox{
 
-Server::Server(int port, int RMport) : _listenSocket(port), _listenRMSocket(RMport), _RMSession(_listenRMSocket, true){
+Server::Server(int port, int RMport) :
+    _listenSocket(port), _listenSocketRM(RMport){
     _port = port;
     _RMport = RMport;
     _primary = true;
     _running = false;
+    _last_id = 0;
+    _id = 0;
     cout << "PORT: " << port << ", RMPORT: " << RMport << endl;
 }
 
 Server::Server(int port, int RMport, std::string priIp, int priPort) :
-    _listenSocket(port), _listenRMSocket(priIp.data(), priPort), _priIp(priIp), _RMSession(_listenRMSocket, false){
+    _listenSocket(port), _listenSocketRM(RMport), _priIp(priIp){
     _port = port;
     _RMport = RMport;
     _priPort = priPort;
     _primary = false;
     _running = false;
+    _last_id = 0;
+    _id = -1;
     cout << "PORT: " << port << ", RMPORT: " << RMport << ", primary RM port: " << priPort << endl;
 }
 
@@ -57,8 +62,6 @@ void Server::run(int numberOfThreads){
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _listenSocket.read();
 
-            cout << "RMs SHOULD NOT SEND MESSAGES TO THIS SOCKET" << endl;
-
             // If there was a problem while reading, it shuts down the connection
             if(packet->bufferLen < 0){
                 std::cout << "Error while trying to read from socket" << std::endl;
@@ -96,20 +99,84 @@ void Server::run(int numberOfThreads){
     }
     );
 
+    // from this point, start the RMs
+    // start threads to
+    for(int i = 0; i < numberOfThreads; i++){
+        _threadPoolRM.push_back(std::thread([&] {
+            while(_running){
+                RMJob job;
+                bool hasJob = false;
+                {
+                    // The lock is destroyed before calling onSessionReadMessage
+                    std::lock_guard<std::mutex> lck(_jobPoolMutexRM);
+                    if(!_jobPoolRM.empty()){
+                        hasJob = true;
+                        auto it = _jobPoolRM.begin();
+                        job = *it;
+                        _jobPoolRM.erase(it);
+                    }
+                }
+
+                if(hasJob){
+                    job.first->onSessionReadMessage(job.second);
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+        }));
+    }
+
+    // thread that awaits for connection with RMs
     _listemRMThread = std::thread([&]{
         while (_running)
         {
             std::shared_ptr<Packet> packet(new Packet);
-            *packet = _listenRMSocket.read();
+            *packet = _listenSocketRM.read();
 
-            _RMSession.setReceiverAddress(_listenRMSocket.getReadingAddress());
-            _RMSession.onSessionReadMessage(packet);
+            std::cout << "recebeu mensagem de " << packet->id << std::endl;
+            std::cout << PacketType::str[packet->type] << endl;
+            std::string clientAddress = _listenSocket.getClientAddressString();
+            std::cout << "endereço do mandante: " << clientAddress << std::endl;
+
+            auto it = _RMSessions.find(packet->id);
+
+            if (it == _RMSessions.end()) {
+                if (packet->type == PacketType::LOGIN){
+                    std::cout << "new RM SESSION" << std::endl;
+                    if (_primary)
+                    {
+                        _last_id ++;
+                        std::cout << "dando o id"  << _last_id;
+                        std::cout << " para a sessão" << std::endl;
+                        packet->id = _last_id;
+                    }
+                    else
+                    {
+                        memcpy(&_id, packet->buffer, sizeof(_id));
+                    }
+
+                    std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM,_primary,_id));
+                    newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
+                    _RMSessions.insert(std::make_pair(packet->id, newSession));
+                    it = _RMSessions.find(packet->id);
+                }
+            }
+
+            if (it != _RMSessions.end())
+            {
+                std::lock_guard<std::mutex> lck(_jobPoolMutexRM);
+                _jobPoolRM.push_back(std::make_pair(it->second, packet));
+            }
         }
     });
 
     if (!_primary){
-        _RMSession.setReceiverAddress(_listenRMSocket.getReadingAddress());
-        _RMSession.init_connection();
+        UDPSocket tmpSocket(_priIp.data(),_priPort);
+        std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM,_primary));
+        newSession->setReceiverAddress(tmpSocket.getReadingAddress());
+        _RMSessions.insert(std::make_pair(0,newSession));
+        newSession->init_connection();
+
     }
 }
 
