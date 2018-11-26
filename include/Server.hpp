@@ -36,7 +36,7 @@ private:
     std::vector<std::thread> _threadPoolRM;
     std::mutex _jobPoolMutexRM;
     std::vector<RMJob> _jobPoolRM;
-    std::map<int, std::shared_ptr<RMSession>> _RMSessions;
+    std::map<std::string, std::shared_ptr<RMSession>> _RMSessions;
 
     int _port;
     int _RMport;

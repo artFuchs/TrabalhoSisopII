@@ -11,7 +11,6 @@ private:
     int _id;
     bool _primary;
     bool _connected;
-
 public:
     RMSession(UDPSocket& socket, bool primary, int server_id = -1) :
         Session<true>(socket){
@@ -30,20 +29,25 @@ public:
         if (packet->type == PacketType::LOGIN)
         {
             if (_primary){
-              cout << "RM received connection request" << endl;
-              _id = (int)packet->id;
-              init_connection();
-            }
-            else if (!_connected){
-              // adquire id da seção e do servidor
-              _id = (int)packet->id;
-              memcpy(&_server_id, packet->buffer, sizeof(_server_id));
-              _connected = true;
-              std::cout << "RM connection acomplished" << std::endl;
-            }
-            else
-            {
-              //get other IPs
+                packet->packetNum = _packetNum;
+                _id = packet->id;  // packet ID must carry the id of session
+                packet->id = _server_id;  // packet ID tells what RM sended it
+                memcpy(packet->buffer, &_id, sizeof(_id));  // set an ID to the secondary RM
+                packet->bufferLen = sizeof(_id);
+
+                // sends the message until get ACK
+                bool ack = false;
+                while (!ack)
+                {
+                    std::cout << "sending ID " << _id << " to the secondary RM" << std::endl;;
+                    int preturn = sendMessageServer(packet);
+                    ack = waitAck(packet->packetNum);
+                }
+                _packetNum++;
+            }else{
+                _id = packet->id; // ID of the RM that this RMSession is communicating with
+                memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
+                std::cout << "received ID: " << _server_id << std::endl;
             }
         }
         else if (packet->type == PacketType::ACK)
@@ -53,27 +57,18 @@ public:
 
     }
 
-    void init_connection(){
-        bool ack = false;
+    //[nonblocking] try to send a LOGIN message to an primary RM
+    void connect(){
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::LOGIN;
-        packet->packetNum = _packetNum;
-        // if primary, this will have the primary server id
-        // if secondary, this will have -1
         packet->id = _server_id;
-        // if primary, this will inform the RM id
-        // if secondary, this will just be ignored
-        memcpy(packet->buffer, &_id, sizeof(_id));
-        packet->bufferLen = sizeof(_id);
-        while(!ack){
-            int preturn = sendMessageServer(packet);
-            if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
-            ack = waitAck(packet->packetNum);
-        }
-
-        _packetNum++;
+        int preturn = sendMessageServer(packet);
+        if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
     }
 
+    int getServerID(){
+        return _server_id;
+    }
 
 
 };

@@ -132,38 +132,40 @@ void Server::run(int numberOfThreads){
         {
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _listenSocketRM.read();
+            bool isLogin = packet->type == PacketType::LOGIN;
 
-            std::cout << "recebeu mensagem de " << packet->id << std::endl;
-            std::cout << PacketType::str[packet->type] << endl;
-            std::string clientAddress = _listenSocket.getClientAddressString();
-            std::cout << "endereço do mandante: " << clientAddress << std::endl;
+            std::cout << "SERVER LEVEL: "<< PacketType::str[packet->type] << std::endl;
 
-            auto it = _RMSessions.find(packet->id);
-
-            if (it == _RMSessions.end()) {
-                if (packet->type == PacketType::LOGIN){
-                    std::cout << "new RM SESSION" << std::endl;
-                    if (_primary)
-                    {
-                        _last_id ++;
-                        std::cout << "dando o id"  << _last_id;
-                        std::cout << " para a sessão" << std::endl;
-                        packet->id = _last_id;
-                    }
-                    else
-                    {
-                        memcpy(&_id, packet->buffer, sizeof(_id));
-                    }
-
-                    std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM,_primary,_id));
-                    newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
-                    _RMSessions.insert(std::make_pair(packet->id, newSession));
-                    it = _RMSessions.find(packet->id);
+            // Secondary, not yet connected
+            if (!_primary && (_id < 0) ){
+                // waits for LOGIN message
+                if (isLogin and packet->bufferLen>0){
+                    // get ID
+                    memcpy(&_id, packet->buffer, sizeof(_id));
                 }
             }
 
-            if (it != _RMSessions.end())
-            {
+            std::string clientAddress = _listenSocketRM.getClientAddressString();
+            auto it = _RMSessions.find(clientAddress);
+
+            bool found = it != _RMSessions.end();
+            bool priOrCon = (_primary || _id > -1);   // Primary or connected
+            if (!found && priOrCon && isLogin) {
+                std::cout << "new RMSession" << std::endl;
+                // generate a new ID
+                if (_primary){
+                    _last_id++;
+                    packet->id = _last_id;
+                }
+                // create RMSession
+                std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM, _primary, _id));
+                newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
+                _RMSessions.insert(std::make_pair(clientAddress, newSession));
+                it = _RMSessions.find(clientAddress);
+            }
+
+            // add session to job_pool
+            if (it != _RMSessions.end()){
                 std::lock_guard<std::mutex> lck(_jobPoolMutexRM);
                 _jobPoolRM.push_back(std::make_pair(it->second, packet));
             }
@@ -171,12 +173,16 @@ void Server::run(int numberOfThreads){
     });
 
     if (!_primary){
+        // creates a temporary socket just to send the LOGIN message
         UDPSocket tmpSocket(_priIp.data(),_priPort);
-        std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM,_primary));
-        newSession->setReceiverAddress(tmpSocket.getReadingAddress());
-        _RMSessions.insert(std::make_pair(0,newSession));
-        newSession->init_connection();
-
+        RMSession tmpSession(_listenSocketRM, false);
+        tmpSession.setReceiverAddress(tmpSocket.getReadingAddress());
+        // try sending the message until have an ID
+        while (_id < 0){
+            std::cout << "trying to connect..." << std::endl;
+            tmpSession.connect();
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
     }
 }
 
