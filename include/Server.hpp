@@ -12,6 +12,7 @@ namespace dropbox{
 
 typedef std::pair<std::shared_ptr<ServerSession>, std::shared_ptr<Packet>> ServerJob;
 typedef std::pair<std::shared_ptr<RMSession>, std::shared_ptr<Packet>> RMJob;
+typedef std::pair<int, struct sockaddr_in> addressEntry;
 
 ///
 /// \brief Server is the class that waits for connections with new clients and launches ServerSessions for them
@@ -48,7 +49,7 @@ private:
     // connection with primaryServer
     int _priPort;
     std::string _priIp;
-
+    vector<addressEntry> _RMAdresses;
 public:
     //primary server constructor
     Server(int port, int RMport);

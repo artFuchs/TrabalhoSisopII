@@ -11,6 +11,24 @@ private:
     int _id;
     bool _primary;
     bool _connected;
+
+    void askAddressesList()
+    {
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::LIST;
+        packet->packetNum = _packetNum;
+        packet->id = _id;
+        packet->bufferLen = 0;
+        // sends the message until get ACK
+        bool ack = false;
+        while (!ack)
+        {
+            std::cout << "RM requesting addresses list to the primary RM" << std::endl;;
+            int preturn = sendMessageServer(packet);
+            ack = waitAck(packet->packetNum);
+        }
+        _packetNum++;
+    }
 public:
     RMSession(UDPSocket& socket, bool primary, int server_id = -1) :
         Session<true>(socket){
@@ -19,6 +37,8 @@ public:
         _server_id = server_id; //id do servidor atual;
         _primary = primary;
         _connected = false;
+        std::cout << "RMSession created - ";
+        std::cout << "primary: " << _primary << std::endl;
     }
 
     void stop(void){}
@@ -39,15 +59,28 @@ public:
                 bool ack = false;
                 while (!ack)
                 {
-                    std::cout << "sending ID " << _id << " to the secondary RM" << std::endl;;
+                    std::cout << "RM sending ID " << _id << " to the secondary RM" << std::endl;;
                     int preturn = sendMessageServer(packet);
                     ack = waitAck(packet->packetNum);
                 }
                 _packetNum++;
-            }else{
+            }else if (!_connected){
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
                 memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
-                std::cout << "received ID: " << _server_id << std::endl;
+                std::cout << "RM received ID: " << _server_id << std::endl;
+                _connected = true;
+                // Ask for the list of Adresses of the primary Server
+                askAddressesList();
+            }
+        }
+        else if (packet->type == PacketType::LIST)
+        {
+            if (_primary)
+            {
+                std::cout << "received request to list RMs addresses" << std::endl;
+            }
+            else{
+                std::cout << "received list of RMs Addresses" << std::endl;
             }
         }
         else if (packet->type == PacketType::ACK)
@@ -57,7 +90,7 @@ public:
 
     }
 
-    //[nonblocking] try to send a LOGIN message to an primary RM
+    // [nonblocking] try to send a LOGIN message to an primary RM
     void connect(){
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::LOGIN;
@@ -66,11 +99,10 @@ public:
         if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
     }
 
+    // Getters / Setters
     int getServerID(){
         return _server_id;
     }
-
-
 };
 
 
