@@ -4,6 +4,8 @@
 
 namespace dropbox{
 
+typedef std::pair<int, struct sockaddr_in> addressEntry;
+
 class RMSession : public Session<true>{
 private:
     uint32_t _packetNum;
@@ -11,24 +13,9 @@ private:
     int _id;
     bool _primary;
     bool _connected;
+    vector<addressEntry> _addresses;
 
-    void askAddressesList()
-    {
-        std::shared_ptr<Packet> packet(new Packet);
-        packet->type = PacketType::LIST;
-        packet->packetNum = _packetNum;
-        packet->id = _id;
-        packet->bufferLen = 0;
-        // sends the message until get ACK
-        bool ack = false;
-        while (!ack)
-        {
-            std::cout << "RM requesting addresses list to the primary RM" << std::endl;;
-            int preturn = sendMessageServer(packet);
-            ack = waitAck(packet->packetNum);
-        }
-        _packetNum++;
-    }
+
 public:
     RMSession(UDPSocket& socket, bool primary, int server_id = -1) :
         Session<true>(socket){
@@ -64,24 +51,24 @@ public:
                     ack = waitAck(packet->packetNum);
                 }
                 _packetNum++;
+
+                // sends addresses from another RMs;
+                sendAddressesList();
+
             }else if (!_connected){
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
                 memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
                 std::cout << "RM received ID: " << _server_id << std::endl;
                 _connected = true;
-                // Ask for the list of Adresses of the primary Server
-                askAddressesList();
             }
         }
         else if (packet->type == PacketType::LIST)
         {
-            if (_primary)
-            {
-                std::cout << "received request to list RMs addresses" << std::endl;
-            }
-            else{
-                std::cout << "received list of RMs Addresses" << std::endl;
-            }
+            int id;
+            struct sockaddr_in address;
+            memcpy(&id, packet->buffer, sizeof(id));
+            memcpy(&address, packet->buffer+sizeof(id), sizeof(address));
+            std::cout << "received Address of RM " << id << std::endl;
         }
         else if (packet->type == PacketType::ACK)
         {
@@ -89,6 +76,54 @@ public:
         }
 
     }
+
+    void askAddressesList()
+    {
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::LIST;
+        packet->packetNum = _packetNum;
+        packet->id = _id;
+        packet->bufferLen = 0;
+        // sends the message until get ACK
+        bool ack = false;
+        while (!ack)
+        {
+            std::cout << "RM requesting addresses list to the primary RM" << std::endl;;
+            int preturn = sendMessageServer(packet);
+            ack = waitAck(packet->packetNum);
+        }
+        _packetNum++;
+    }
+
+    void sendAddressesList()
+    {
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::LIST;
+        packet->packetNum = _packetNum;
+        packet->id = _id;
+        packet->totalFragments = _addresses.size();
+        packet->fragmentNum = 0;
+
+        for (auto it = _addresses.begin(); it<_addresses.end(); it++)
+        {
+            bool ack = false;
+            int id = it->first;
+            struct sockaddr_in address =  it->second;
+
+            memcpy(packet->buffer, &id, sizeof(id));
+            memcpy(packet->buffer+sizeof(id), &address, sizeof(address));
+            packet->bufferLen = sizeof(id) + sizeof(address);
+            while(!ack){
+                int preturn = sendMessageServer(packet);
+                if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
+                ack = waitAck(_packetNum);
+            }
+            _packetNum++;
+        }
+
+
+    }
+
 
     // [nonblocking] try to send a LOGIN message to an primary RM
     void connect(){
@@ -102,6 +137,16 @@ public:
     // Getters / Setters
     int getServerID(){
         return _server_id;
+    }
+
+    void setAddresses(vector<addressEntry> addresses)
+    {
+        _addresses = addresses;
+    }
+
+    vector<addressEntry> getAddresses()
+    {
+        return _addresses;
     }
 };
 

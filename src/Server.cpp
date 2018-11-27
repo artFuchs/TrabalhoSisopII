@@ -12,6 +12,7 @@ Server::Server(int port, int RMport) :
     _running = false;
     _last_id = 0;
     _id = 0;
+    _RMAdresses.clear();
     cout << "PORT: " << port << ", RMPORT: " << RMport << endl;
 }
 
@@ -24,6 +25,7 @@ Server::Server(int port, int RMport, std::string priIp, int priPort) :
     _running = false;
     _last_id = 0;
     _id = -1;
+    _RMAdresses.clear();
     cout << "PORT: " << port << ", RMPORT: " << RMport << ", primary RM port: " << priPort << endl;
 }
 
@@ -149,8 +151,8 @@ void Server::run(int numberOfThreads){
             auto it = _RMSessions.find(clientAddress);
 
             bool found = it != _RMSessions.end();
-            bool priOrCon = (_primary || _id > -1);   // Primary or connected
-            if (!found && priOrCon && isLogin) {
+            bool hasID = _id > -1;
+            if (!found && hasID && isLogin) {
                 std::cout << "new RMSession" << std::endl;
                 // generate a new ID
                 if (_primary){
@@ -159,7 +161,9 @@ void Server::run(int numberOfThreads){
                 }
                 // create RMSession
                 std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM, _primary, _id));
+                newSession->setAddresses(_RMAdresses);
                 newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
+                _RMAdresses.push_back(std::make_pair(packet->id,_listenSocketRM.getReadingAddress()));
                 _RMSessions.insert(std::make_pair(clientAddress, newSession));
                 it = _RMSessions.find(clientAddress);
             }
