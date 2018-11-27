@@ -31,16 +31,21 @@ private:
     std::map<std::string, std::shared_ptr<SessionSupervisor<ServerSession>>> _serverSessionsByUsername;
     //std::mutex _ssByUsernameMutex; // Useful if we want to add another thread to receive new messages
 
+    int _port;
+    bool _running;
+
+    // information about RMs
+    // maybe it would be a good idea to create a RM Manager class
     std::thread _listemRMThread;
     UDPSocket _listenSocketRM;
     std::vector<std::thread> _threadPoolRM;
     std::mutex _jobPoolMutexRM;
     std::vector<RMJob> _jobPoolRM;
     std::map<std::string, std::shared_ptr<RMSession>> _RMSessions;
+    AddressList _RMAdresses;
 
-    int _port;
+
     int _RMport;
-    bool _running;
     bool _primary;
     int _id;  //server id
     int _last_id;  //last given id
@@ -48,7 +53,8 @@ private:
     // connection with primaryServer
     int _priPort;
     std::string _priIp;
-    vector<addressEntry> _RMAdresses;
+
+    void updateLastID(int);
 public:
     //primary server constructor
     Server(int port, int RMport);
@@ -57,7 +63,6 @@ public:
 
     void run(int numberOfThreads = 4);
     void stop(void);
-
 };
 
 }

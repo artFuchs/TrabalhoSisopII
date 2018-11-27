@@ -4,7 +4,7 @@
 
 namespace dropbox{
 
-typedef std::pair<int, struct sockaddr_in> addressEntry;
+typedef std::map<int, struct sockaddr_in> AddressList;
 
 class RMSession : public Session<true>{
 private:
@@ -13,7 +13,8 @@ private:
     int _id;
     bool _primary;
     bool _connected;
-    vector<addressEntry> _addresses;
+    AddressList _addresses;
+    struct sockaddr_in originalAddress;
 
 
 public:
@@ -26,6 +27,7 @@ public:
         _connected = false;
         std::cout << "RMSession created - ";
         std::cout << "primary: " << _primary << std::endl;
+        originalAddress = socket.getReadingAddress();
     }
 
     void stop(void){}
@@ -54,13 +56,37 @@ public:
 
                 // sends addresses from another RMs;
                 sendAddressesList();
-
-            }else if (!_connected){
+            // if server is waiting for an ID
+            }else if (!_connected && _server_id < 0){
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
                 memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
-                std::cout << "RM received ID: " << _server_id << std::endl;
+                std::cout << "RM received ID: " << _server_id << " from RM " << _id << std::endl;
+            // if server has already an ID, smaller than the connecting server
+            }else if (!_connected && _server_id < packet->id){ //
+                _id = packet->id; // ID of the RM that this RMSession is communicating with
+                std::cout << "RM received connecting request from RM " << _id << std::endl;
+                packet->id = _server_id;
+                packet->packetNum = _packetNum;
+
+                bool ack = false;
+                while (!ack)
+                {
+                    std::cout << "RM sending ID " << _id << " to the secondary RM" << std::endl;;
+                    int preturn = sendMessageServer(packet);
+                    ack = waitAck(packet->packetNum);
+                }
+
+                _packetNum++;
+            }else if (!_connected){
+                _id = packet->id;
+                std::cout << "connected with RM " << _id << std::endl;
                 _connected = true;
             }
+            else{
+                std::cout << "Strange... this session is already connected... but just sent a LOGIN request..." << std::endl;
+                std::cout << "This is a work to Sherlock Holmes." << std::endl;
+            }
+
         }
         else if (packet->type == PacketType::LIST)
         {
@@ -68,7 +94,13 @@ public:
             struct sockaddr_in address;
             memcpy(&id, packet->buffer, sizeof(id));
             memcpy(&address, packet->buffer+sizeof(id), sizeof(address));
-            std::cout << "received Address of RM " << id << std::endl;
+            std::string address_str = std::to_string(address.sin_addr.s_addr) + ":" + std::to_string(address.sin_port);
+            std::cout << "received {ID: " << id << ", ADDRESS: " << address_str << "}" << std::endl;
+            _addresses[id]=address;
+            // TODO: need to think of something to have certain that the other RM received the LOGIN message
+            setReceiverAddress(address);
+            connect(id);
+            setReceiverAddress(originalAddress);
         }
         else if (packet->type == PacketType::ACK)
         {
@@ -77,34 +109,16 @@ public:
 
     }
 
-    void askAddressesList()
-    {
-        std::shared_ptr<Packet> packet(new Packet);
-        packet->type = PacketType::LIST;
-        packet->packetNum = _packetNum;
-        packet->id = _id;
-        packet->bufferLen = 0;
-        // sends the message until get ACK
-        bool ack = false;
-        while (!ack)
-        {
-            std::cout << "RM requesting addresses list to the primary RM" << std::endl;;
-            int preturn = sendMessageServer(packet);
-            ack = waitAck(packet->packetNum);
-        }
-        _packetNum++;
-    }
-
     void sendAddressesList()
     {
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::LIST;
         packet->packetNum = _packetNum;
-        packet->id = _id;
+        packet->id = _server_id;
         packet->totalFragments = _addresses.size();
         packet->fragmentNum = 0;
 
-        for (auto it = _addresses.begin(); it<_addresses.end(); it++)
+        for (auto it = _addresses.begin(); it!=_addresses.end(); it++)
         {
             bool ack = false;
             int id = it->first;
@@ -113,6 +127,8 @@ public:
             memcpy(packet->buffer, &id, sizeof(id));
             memcpy(packet->buffer+sizeof(id), &address, sizeof(address));
             packet->bufferLen = sizeof(id) + sizeof(address);
+            std::string address_str = std::to_string(address.sin_addr.s_addr) + ":" + std::to_string(address.sin_port);
+            std::cout << "sending {ID: " << id << ", ADDRESS: " << address_str <<  "}" << std::endl;
             while(!ack){
                 int preturn = sendMessageServer(packet);
                 if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
@@ -126,10 +142,11 @@ public:
 
 
     // [nonblocking] try to send a LOGIN message to an primary RM
-    void connect(){
+    void connect(int id = 0){
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::LOGIN;
         packet->id = _server_id;
+        packet->packetNum = 0;
         int preturn = sendMessageServer(packet);
         if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
     }
@@ -139,12 +156,12 @@ public:
         return _server_id;
     }
 
-    void setAddresses(vector<addressEntry> addresses)
+    void setAddresses(AddressList addresses)
     {
         _addresses = addresses;
     }
 
-    vector<addressEntry> getAddresses()
+    AddressList getAddresses()
     {
         return _addresses;
     }

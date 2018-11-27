@@ -136,7 +136,7 @@ void Server::run(int numberOfThreads){
             *packet = _listenSocketRM.read();
             bool isLogin = packet->type == PacketType::LOGIN;
 
-            std::cout << "SERVER LEVEL: "<< PacketType::str[packet->type] << std::endl;
+            std::cout << "SERVER received: " << PacketType::str[packet->type] << std::endl;
 
             // Secondary, not yet connected
             if (!_primary && (_id < 0) ){
@@ -144,6 +144,7 @@ void Server::run(int numberOfThreads){
                 if (isLogin and packet->bufferLen>0){
                     // get ID
                     memcpy(&_id, packet->buffer, sizeof(_id));
+                    updateLastID(_id);
                 }
             }
 
@@ -156,15 +157,15 @@ void Server::run(int numberOfThreads){
                 std::cout << "new RMSession" << std::endl;
                 // generate a new ID
                 if (_primary){
-                    _last_id++;
-                    packet->id = _last_id;
+                    packet->id = _last_id+1;
                 }
                 // create RMSession
                 std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM, _primary, _id));
                 newSession->setAddresses(_RMAdresses);
                 newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
-                _RMAdresses.push_back(std::make_pair(packet->id,_listenSocketRM.getReadingAddress()));
+                _RMAdresses[packet->id] = _listenSocketRM.getReadingAddress();
                 _RMSessions.insert(std::make_pair(clientAddress, newSession));
+                updateLastID(packet->id);
                 it = _RMSessions.find(clientAddress);
             }
 
@@ -200,5 +201,9 @@ void Server::stop(void){
     if(_listenConnectionsThread.joinable()) _listenConnectionsThread.join();
 }
 
+void Server::updateLastID(int id){
+    if (id > _last_id)
+      _last_id = id;
+}
 
 }
