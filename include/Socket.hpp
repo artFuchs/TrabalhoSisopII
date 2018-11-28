@@ -30,7 +30,8 @@ namespace PacketType{
         EXIT,
         DOWNLOAD,
         DELETE,
-        LIST
+        LIST,       //for the RMs, this means an AddresSListEntry
+        SIGNAL      //keep alive
     };
 
     static constexpr const char* str[] = {
@@ -40,7 +41,8 @@ namespace PacketType{
         "EXIT",
         "DOWNLOAD",
         "DELETE",
-        "LIST"
+        "LIST",
+        "SIGNAL"
     };
 
 }

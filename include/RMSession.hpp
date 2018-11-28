@@ -16,6 +16,8 @@ private:
     AddressList _addresses;
     struct sockaddr_in originalAddress;
 
+    std::thread signalThread;
+    uint counter;
 
 public:
     RMSession(UDPSocket& socket, bool primary, int server_id = -1) :
@@ -34,7 +36,7 @@ public:
 
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet); // Handles ACK
-
+        counter++;
         if (packet->type == PacketType::LOGIN)
         {
             if (_primary){
@@ -61,6 +63,8 @@ public:
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
                 memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
                 std::cout << "RM received ID: " << _server_id << " from RM " << _id << std::endl;
+                _connected = true;
+                signalThread = std::thread(&RMSession::keepAlive,this);
             // if server has already an ID, smaller than the connecting server
             }else if (!_connected && _server_id < packet->id){ //
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
@@ -75,7 +79,7 @@ public:
                     int preturn = sendMessageServer(packet);
                     ack = waitAck(packet->packetNum);
                 }
-
+                _connected = true;
                 _packetNum++;
             }else if (!_connected){
                 _id = packet->id;
@@ -140,7 +144,6 @@ public:
 
     }
 
-
     // [nonblocking] try to send a LOGIN message to an primary RM
     void connect(int id = 0){
         std::shared_ptr<Packet> packet(new Packet);
@@ -151,19 +154,29 @@ public:
         if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
     }
 
+    void keepAlive(){
+        cout << "starting keep alive" << endl;
+        uint last_counter;
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::SIGNAL;
+        packet->packetNum = 0;
+        packet->id = _server_id;
+        while (_connected){
+            last_counter = counter;
+            int preturn = sendMessageServer(packet);
+            if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            if (last_counter == counter){
+                std::cout << "the RM " << _id << " is probably dead." << std::endl;
+                _connected = false;
+            }
+        }
+
+    }
+
     // Getters / Setters
-    int getServerID(){
-        return _server_id;
-    }
-
-    void setAddresses(AddressList addresses)
-    {
+    void setAddresses(AddressList addresses){
         _addresses = addresses;
-    }
-
-    AddressList getAddresses()
-    {
-        return _addresses;
     }
 };
 

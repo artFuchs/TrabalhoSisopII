@@ -138,22 +138,11 @@ void Server::run(int numberOfThreads){
 
             std::cout << "SERVER received: " << PacketType::str[packet->type] << std::endl;
 
-            // Secondary, not yet connected
-            if (!_primary && (_id < 0) ){
-                // waits for LOGIN message
-                if (isLogin and packet->bufferLen>0){
-                    // get ID
-                    memcpy(&_id, packet->buffer, sizeof(_id));
-                    updateLastID(_id);
-                }
-            }
-
             std::string clientAddress = _listenSocketRM.getClientAddressString();
             auto it = _RMSessions.find(clientAddress);
 
             bool found = it != _RMSessions.end();
-            bool hasID = _id > -1;
-            if (!found && hasID && isLogin) {
+            if (!found && isLogin) {
                 std::cout << "new RMSession" << std::endl;
                 // generate a new ID
                 if (_primary){
@@ -163,10 +152,21 @@ void Server::run(int numberOfThreads){
                 std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM, _primary, _id));
                 newSession->setAddresses(_RMAdresses);
                 newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
-                _RMAdresses[packet->id] = _listenSocketRM.getReadingAddress();
-                _RMSessions.insert(std::make_pair(clientAddress, newSession));
-                updateLastID(packet->id);
-                it = _RMSessions.find(clientAddress);
+
+                // get id if still don't have one
+                if (_id < 0 and packet->bufferLen > 0){
+                    memcpy(&_id, packet->buffer, sizeof(_id));
+                    updateLastID(_id);
+                }
+
+                if (_id > -1)
+                {
+                    _RMAdresses[packet->id] = _listenSocketRM.getReadingAddress();
+                    _RMSessions.insert(std::make_pair(clientAddress, newSession));
+                    updateLastID(packet->id);
+                    it = _RMSessions.find(clientAddress);
+                }
+
             }
 
             // add session to job_pool
