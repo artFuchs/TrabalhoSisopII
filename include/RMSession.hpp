@@ -1,10 +1,9 @@
 #pragma once
 
 #include "Session.hpp"
+#include "ElectionManager.hpp"
 
 namespace dropbox{
-
-typedef std::map<int, struct sockaddr_in> AddressList;
 
 class RMSession : public Session<true>{
 private:
@@ -19,9 +18,11 @@ private:
     std::thread signalThread;
     uint counter;
 
+    ElectionManager& _electionManager;
+
 public:
-    RMSession(UDPSocket& socket, bool primary, int server_id = -1) :
-        Session<true>(socket){
+    RMSession(ElectionManager& em, UDPSocket& socket, bool primary, int server_id = -1) :
+        Session<true>(socket), _electionManager(em){
         _packetNum = 0;
         _id = 0; //com qual RM a sessão se comunica
         _server_id = server_id; //id do servidor atual;
@@ -106,6 +107,18 @@ public:
             connect(id);
             setReceiverAddress(originalAddress);
         }
+        else if (packet->type == PacketType::ELECTION)
+        {
+            _electionManager.onElection(packet);
+        }
+        else if (packet->type == PacketType::ANSWER)
+        {
+            _electionManager.onAnswer(packet);
+        }
+        else if (packet->type == PacketType::COORDINATOR)
+        {
+            _electionManager.onCoordinator(packet);
+        }
         else if (packet->type == PacketType::ACK)
         {
             std::cout << "RM received ACK: " << packet->packetNum << std::endl;
@@ -169,6 +182,11 @@ public:
             if (last_counter == counter){
                 std::cout << "the RM " << _id << " is probably dead." << std::endl;
                 _connected = false;
+
+                // If the primary RM fails, starts a new election
+                if(_primary){
+                    _electionManager.election();
+                }
             }
         }
 

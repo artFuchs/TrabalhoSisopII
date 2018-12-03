@@ -8,6 +8,8 @@
 #include "ServerSession.hpp"
 #include "RMSession.hpp"
 
+#include "ElectionManager.hpp"
+
 namespace dropbox{
 
 typedef std::pair<std::shared_ptr<ServerSession>, std::shared_ptr<Packet>> ServerJob;
@@ -44,6 +46,7 @@ private:
     std::map<std::string, std::shared_ptr<RMSession>> _RMSessions;
     AddressList _RMAdresses;
 
+    ElectionManager _electionManager;
 
     int _RMport;
     bool _primary;

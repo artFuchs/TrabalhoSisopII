@@ -31,7 +31,10 @@ namespace PacketType{
         DOWNLOAD,
         DELETE,
         LIST,       //for the RMs, this means an AddresSListEntry
-        SIGNAL      //keep alive
+        SIGNAL,      //keep alive
+        ELECTION,
+        ANSWER,
+        COORDINATOR
     };
 
     static constexpr const char* str[] = {
@@ -43,6 +46,9 @@ namespace PacketType{
         "DELETE",
         "LIST",
         "SIGNAL"
+        "ELECTION",
+        "ANSWER",
+        "COORDINATOR"
     };
 
 }
