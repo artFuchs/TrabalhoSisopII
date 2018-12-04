@@ -17,6 +17,7 @@ private:
     bool _isPrimary;
     bool _loggedIn = false;
     char* _username;
+    char _user[BUFFER_MAX_SIZE];
     std::vector<std::shared_ptr<RMSession>> _rmSessions;
 
 public:
@@ -31,7 +32,8 @@ public:
     }
 
     void loggedIn(char* user){
-        strcpy(_username, user);
+        strcpy(_user, user);
+        _username = _user;
         _loggedIn = true;
     }
 

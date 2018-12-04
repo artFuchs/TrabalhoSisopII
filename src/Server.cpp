@@ -98,7 +98,10 @@ void Server::run(int numberOfThreads){
 
                     newSession->setReceiverAddress(_listenSocket.getReadingAddress());
                     newSession->setRMManager(_rmManager);
+                    std::cout << "hello\n";
                     _rmManager->loggedIn(packet->buffer);
+                    std::cout << "hello1\n";
+
 
                     _serverSessions.insert(std::make_pair(clientAddress, newSession));
                     supervisor->addSession(std::make_pair(clientAddress, newSession));
