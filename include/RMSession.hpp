@@ -18,6 +18,7 @@ private:
     struct sockaddr_in originalAddress;
     FileManager fileMgr;
     char* username = nullptr;
+    char user[BUFFER_MAX_SIZE];
     std::thread signalThread;
     uint counter;
 
@@ -176,7 +177,8 @@ public:
                 std::cout << "Login message!!!" << '\n';
 
                 std::string directory = std::string("./") + std::string(packet->buffer);
-                strcpy(username, packet->buffer);
+                strcpy(user, packet->buffer);
+                username = user;
                 fileMgr.check_dir(directory);
                 if (fileMgr.is_valid()) {
 
