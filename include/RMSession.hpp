@@ -86,8 +86,9 @@ public:
                     }
 
                     sendAllFiles(username);
-                    signalThread = std::thread(&RMSession::dieSlowly, this);
                 }
+                _connected = true;
+                signalThread = std::thread(&RMSession::dieSlowly, this);
 
             // if server is waiting for an ID
             } else if (!_connected && _server_id < 0){
@@ -195,22 +196,20 @@ public:
                 else {
                     std::cout << "Error opening/creating the user directory " << directory << std::endl;
                 }
-            }else
-        }
-            } else if (packet->type == PacketType::DELETE){
-                if (_primary){
-                    bool ack = false;
-                    while (!ack)
-                    {
-                        int preturn = sendMessageServer(packet);
-                        ack = waitAck(packet->packetNum);
-                    }
-                } else{
-                    std::cout << "delete " << packet->filename << std::endl;
-                    fileMgr.delete_file(string(packet->filename));
+            }
+        } else if (packet->type == PacketType::DELETE){
+            if (_primary){
+                bool ack = false;
+                while (!ack)
+                {
+                    int preturn = sendMessageServer(packet);
+                    ack = waitAck(packet->packetNum);
                 }
+            } else{
+                std::cout << "delete " << packet->filename << std::endl;
+                fileMgr.delete_file(string(packet->filename));
+            }
       }
-
     }
 
     void sendAddressesList()
@@ -267,7 +266,7 @@ public:
             if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
             std::this_thread::sleep_for(std::chrono::seconds(1));
             if (last_counter == counter){
-                std::cout << "the RM " << _id << " is probably dead."dieSlowly << std::endl;
+                std::cout << "the RM " << _id << " is probably dead." << std::endl;
                 _connected = false;
             }
         }
@@ -275,12 +274,15 @@ public:
 
     void dieSlowly(){
         uint last_counter;
+        std::cout << "dying slowly" << std::endl;
         while(_connected){
+            std::cout << "I am alive" << std::endl;
             last_counter = counter;
             std::this_thread::sleep_for(std::chrono::seconds(3));
             if (last_counter == counter){
                 std::cout << "died" << std::endl;
                 alive = false;
+                break;
             }
         }
     }
@@ -295,6 +297,9 @@ public:
         _addresses = addresses;
     }
 
+    int getID(){
+        return _id;
+    }
 
     // ============= ServerSession methods ===================
 
