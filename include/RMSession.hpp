@@ -20,6 +20,8 @@ private:
     char* username = nullptr;
     std::thread signalThread;
     uint counter;
+    bool alive;
+
 
 public:
     RMSession(UDPSocket& socket, bool primary, int server_id = -1, char*user = nullptr) :
@@ -34,6 +36,7 @@ public:
         std::cout << "primary: " << _primary << std::endl;
         originalAddress = socket.getReadingAddress();
         username = user;
+        alive = true;
     }
 
     void stop(void){}
@@ -82,6 +85,7 @@ public:
                     }
 
                     sendAllFiles(username);
+                    signalThread = std::thread(&RMSession::dieSlowly, this);
                 }
 
             // if server is waiting for an ID
@@ -136,6 +140,10 @@ public:
         {
             std::cout << "RM received ACK: " << packet->packetNum << std::endl;
         }
+        else if (packet->type == PacketType::SIGNAL && _primary)
+        {
+            counter++;
+        }
         // ============
         else if(packet->type == PacketType::DATA){
             if (_primary){
@@ -171,7 +179,7 @@ public:
 
                 sendAllFiles(packet->buffer);
 
-            } else{
+            } else if (_connected){
 
                 std::cout << "Login message!!!" << '\n';
 
@@ -185,6 +193,7 @@ public:
                 else {
                     std::cout << "Error opening/creating the user directory " << directory << std::endl;
                 }
+            }else
         }
             } else if (packet->type == PacketType::DELETE){
                 if (_primary){
@@ -256,11 +265,27 @@ public:
             if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
             std::this_thread::sleep_for(std::chrono::seconds(1));
             if (last_counter == counter){
-                std::cout << "the RM " << _id << " is probably dead." << std::endl;
+                std::cout << "the RM " << _id << " is probably dead."dieSlowly << std::endl;
                 _connected = false;
             }
         }
+    }
 
+    void dieSlowly(){
+        uint last_counter;
+        while(_connected){
+            last_counter = counter;
+            std::this_thread::sleep_for(std::chrono::seconds(3));
+            if (last_counter == counter){
+                std::cout << "died" << std::endl;
+                alive = false;
+            }
+        }
+    }
+
+
+    bool isAlive(){
+        return alive;
     }
 
     // Getters / Setters
