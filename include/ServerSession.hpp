@@ -36,7 +36,7 @@ public:
 
     void stop(void){
     }
-    
+
     void setRMManager(std::shared_ptr<RMManager> manager) {
         _rmManager = manager;
     }

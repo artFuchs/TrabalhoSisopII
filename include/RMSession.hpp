@@ -17,7 +17,7 @@ private:
     AddressList _addresses;
     struct sockaddr_in originalAddress;
     FileManager fileMgr;
-    char* username;
+    char* username = nullptr;
     std::thread signalThread;
     uint counter;
 
@@ -41,7 +41,7 @@ public:
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet); // Handles ACK
         counter++;
-        
+
         if (packet->type == PacketType::LOGIN_RM)
         {
             if (_primary){
@@ -64,6 +64,8 @@ public:
 
                 // sends addresses from another RMs;
                 sendAddressesList();
+                if (username == nullptr)
+                  std::cout << "NULLPTR\n";
 
                 if (username) {
                     std::cout << "Estou logado, deveria enviar coisas pros secundarios!" << '\n';
@@ -78,10 +80,10 @@ public:
                         int preturn = sendMessageServer(loginPacket);
                         ack1 = waitAck(loginPacket->packetNum);
                     }
-                    
+
                     sendAllFiles(username);
                 }
-                
+
             // if server is waiting for an ID
             } else if (!_connected && _server_id < 0){
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
@@ -145,7 +147,7 @@ public:
                 }
             } else{
                 std::cout << "Data message!!!" << '\n';
-                
+
                 std::string file(packet->filename, packet->pathLen);
                 uint part = packet->fragmentNum;
                 uint total = packet->totalFragments;
@@ -166,13 +168,13 @@ public:
                     int preturn = sendMessageServer(packet);
                     ack = waitAck(packet->packetNum);
                 }
-                
+
                 sendAllFiles(packet->buffer);
-                
+
             } else{
-                
+
                 std::cout << "Login message!!!" << '\n';
-                
+
                 std::string directory = std::string("./") + std::string(packet->buffer);
                 strcpy(username, packet->buffer);
                 fileMgr.check_dir(directory);
@@ -265,10 +267,10 @@ public:
     void setAddresses(AddressList addresses){
         _addresses = addresses;
     }
-    
-    
+
+
     // ============= ServerSession methods ===================
-    
+
     std::string parsePath(char filename[FILENAME_MAX_SIZE]){
       //check if filename init by GLOBAL_TOKEN
       std::string path(filename);
@@ -312,7 +314,7 @@ public:
         std::cout << "Sync directory is invalid" << std::endl;
       }
     }
-    
+
     bool sendFile(char filename[FILENAME_MAX_SIZE]){
       std::string fname = parsePath(filename);
 
@@ -361,7 +363,7 @@ public:
       }
       return true;
     }
-    
+
     void sendAllFiles(char *username) {
         std::cout << "username   " << username << "\n";
         std::string directory = std::string("./") + std::string(username);

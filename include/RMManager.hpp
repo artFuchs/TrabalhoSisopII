@@ -16,29 +16,29 @@ private:
 
     bool _isPrimary;
     bool _loggedIn = false;
-    char _username[BUFFER_MAX_SIZE];
+    char* _username;
     std::vector<std::shared_ptr<RMSession>> _rmSessions;
 
 public:
     RMManager(bool isPrimary) {
         _isPrimary = isPrimary;
-        bool _loggedIn = false;
-        char* _username = nullptr;
+        _loggedIn = false;
+        _username = nullptr;
     }
-    
+
     void addRMSession(std::shared_ptr<RMSession> session) {
         _rmSessions.push_back(session);
     }
-    
+
     void loggedIn(char* user){
         strcpy(_username, user);
         _loggedIn = true;
     }
-    
+
     bool getLoggedIn(){
         return _loggedIn;
     }
-    
+
     char* getUsername(){
         return _username;
     }
@@ -50,7 +50,7 @@ public:
             sendToAllSessions(packet);
         }
     }
-    
+
     void sendToAllSessions(std::shared_ptr<Packet> packet) {
         for (int i = 0; i < _rmSessions.size(); i++) {
             _rmSessions[i]->onSessionReadMessage(packet);
