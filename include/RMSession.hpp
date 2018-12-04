@@ -11,10 +11,12 @@ private:
     int _server_id;
     int _id;
     bool _primary;
+    bool _otherPrimary;
     bool _connected;
     AddressList _addresses;
     struct sockaddr_in originalAddress;
 
+    bool _signalRunning;
     std::thread signalThread;
     uint counter;
 
@@ -27,7 +29,9 @@ public:
         _id = 0; //com qual RM a sessão se comunica
         _server_id = server_id; //id do servidor atual;
         _primary = primary;
+        _otherPrimary = false;
         _connected = false;
+        _signalRunning = false;
         std::cout << "RMSession created - ";
         std::cout << "primary: " << _primary << std::endl;
         originalAddress = socket.getReadingAddress();
@@ -38,6 +42,12 @@ public:
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet); // Handles ACK
         counter++;
+        
+        if(!_signalRunning){
+            signalThread = std::thread(&RMSession::keepAlive,this);
+            _signalRunning = true;
+        }
+        
         if (packet->type == PacketType::LOGIN)
         {
             if (_primary){
@@ -65,7 +75,6 @@ public:
                 memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
                 std::cout << "RM received ID: " << _server_id << " from RM " << _id << std::endl;
                 _connected = true;
-                signalThread = std::thread(&RMSession::keepAlive,this);
             // if server has already an ID, smaller than the connecting server
             }else if (!_connected && _server_id < packet->id){ //
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
@@ -106,6 +115,7 @@ public:
             setReceiverAddress(address);
             connect(id);
             setReceiverAddress(originalAddress);
+            _otherPrimary = true;
         }
         else if (packet->type == PacketType::ELECTION)
         {
@@ -118,6 +128,7 @@ public:
         else if (packet->type == PacketType::COORDINATOR)
         {
             _electionManager.onCoordinator(packet);
+            _otherPrimary = true;
         }
         else if (packet->type == PacketType::ACK)
         {
@@ -184,7 +195,7 @@ public:
                 _connected = false;
 
                 // If the primary RM fails, starts a new election
-                if(_primary){
+                if(_otherPrimary){
                     _electionManager.election();
                 }
             }

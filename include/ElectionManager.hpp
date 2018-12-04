@@ -46,52 +46,56 @@ public:
         _waitAnswerTimeout = 500;
         _waitCoordinatorTimeout = 500;
         _afterElectionWaitTime = 500;
-    }
-
-    void election(){
-        std::unique_lock<std::mutex> lck(_electionMutex);
-
-        if(!_runningElection){
-            _runningElection = true;
-
-            _electionThread = std::thread([&]{
-                bool hasWon = false;
-
+        
+        _electionThread = std::thread([&]{
                 while(true){
-                    // Edge case where there is no RM with smaller id
-                    if(checkSmallerRMID()){
-                        sendCoordinator();
-                        hasWon = true;
-                        break;
-                    }
+                    // Waits until _runningElection is set to true 
+                    while(!_runningElection);
+                    bool hasWon = false;
 
-                    // Send election to the other RMs
-                    sendElection();
-
-                    if(waitAnswer()){
-                        // Received an answer, waits for a coordinator
-                        // If no message was received, reinitiates the election
-                        if(waitCoordinator()){
+                    while(true){
+                        // Edge case where there is no RM with smaller id
+                        if(checkSmallerRMID()){
+                            sendCoordinator();
+                            hasWon = true;
                             break;
                         }
-                    } else{
-                        // No answer received, this RM is the new coordinator
-                        sendCoordinator();
-                        hasWon = true;
-                        break;
+
+                        // Send election to the other RMs
+                        sendElection();
+
+                        if(waitAnswer()){
+                            // Received an answer, waits for a coordinator
+                            // If no message was received, reinitiates the election
+                            if(waitCoordinator()){
+                                break;
+                            }
+                        } else{
+                            // No answer received, this RM is the new coordinator
+                            sendCoordinator();
+                            hasWon = true;
+                            break;
+                        }
                     }
-                }
 
-                if(hasWon){
-                    onElectionWon();
-                }
+                    if(hasWon){
+                        onElectionWon();
+                    }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(_afterElectionWaitTime));
-                _receivedAnswer = false;
-                _receivedCoordinator = false;
-                _runningElection = false;
+                    // Doesn't seem necessary
+                    // std::this_thread::sleep_for(std::chrono::milliseconds(_afterElectionWaitTime));
+                    _receivedAnswer = false;
+                    _receivedCoordinator = false;
+                    _runningElection = false;
+                }
             });
-        }
+    }
+
+    // TODO: receive the id of the RM that has failed to handle
+    // the failure of multiple coordinators while _electionThread
+    // is running an election (unlikely)
+    void election(){
+        _runningElection = true;
     }
 
     void sendElection(){

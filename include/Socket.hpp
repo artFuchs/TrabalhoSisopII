@@ -45,7 +45,7 @@ namespace PacketType{
         "DOWNLOAD",
         "DELETE",
         "LIST",
-        "SIGNAL"
+        "SIGNAL",
         "ELECTION",
         "ANSWER",
         "COORDINATOR"
