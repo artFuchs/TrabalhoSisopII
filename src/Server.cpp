@@ -13,6 +13,10 @@ Server::Server(int port, int RMport) :
     _last_id = 0;
     _id = 0;
     _RMAdresses.clear();
+    
+    std::shared_ptr<RMManager> manager(new RMManager(true));
+    _rmManager = manager;
+    
     cout << "PORT: " << port << ", RMPORT: " << RMport << endl;
 }
 
@@ -26,6 +30,10 @@ Server::Server(int port, int RMport, std::string priIp, int priPort) :
     _last_id = 0;
     _id = -1;
     _RMAdresses.clear();
+    
+    std::shared_ptr<RMManager> manager(new RMManager(false));
+    _rmManager = manager;
+    
     cout << "PORT: " << port << ", RMPORT: " << RMport << ", primary RM port: " << priPort << endl;
 }
 
@@ -85,8 +93,13 @@ void Server::run(int numberOfThreads){
                     } else{
                         _serverSessionsByUsername.insert(std::make_pair(username, supervisor));
                     }
+                    
                     std::shared_ptr<ServerSession> newSession(new ServerSession(clientAddress, _listenSocket, supervisor));
+                    
                     newSession->setReceiverAddress(_listenSocket.getReadingAddress());
+                    newSession->setRMManager(_rmManager);
+                    _rmManager->loggedIn(packet->buffer);
+                    
                     _serverSessions.insert(std::make_pair(clientAddress, newSession));
                     supervisor->addSession(std::make_pair(clientAddress, newSession));
                     it = _serverSessions.find(clientAddress);
@@ -134,7 +147,7 @@ void Server::run(int numberOfThreads){
         {
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _listenSocketRM.read();
-            bool isLogin = packet->type == PacketType::LOGIN;
+            bool isLogin = packet->type == PacketType::LOGIN_RM;
 
             std::cout << "SERVER received: " << PacketType::str[packet->type] << std::endl;
 
@@ -149,9 +162,13 @@ void Server::run(int numberOfThreads){
                     packet->id = _last_id+1;
                 }
                 // create RMSession
-                std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM, _primary, _id));
+
+                std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM, _primary, _id, _rmManager->getUsername()));
+
                 newSession->setAddresses(_RMAdresses);
                 newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
+                
+                cout << "Criei um novo RMSESSION" << endl;
 
                 // get id if still don't have one
                 if (_id < 0 and packet->bufferLen > 0){
@@ -163,6 +180,10 @@ void Server::run(int numberOfThreads){
                 {
                     _RMAdresses[packet->id] = _listenSocketRM.getReadingAddress();
                     _RMSessions.insert(std::make_pair(clientAddress, newSession));
+                    
+                    _rmManager->addRMSession(newSession);
+                    
+                    cout << "SALVEI A RMSESSION NO MAP" << endl;
                     updateLastID(packet->id);
                     it = _RMSessions.find(clientAddress);
                 }

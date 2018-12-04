@@ -7,6 +7,7 @@
 
 #include "ServerSession.hpp"
 #include "RMSession.hpp"
+#include "RMManager.hpp"
 
 namespace dropbox{
 
@@ -53,6 +54,8 @@ private:
     // connection with primaryServer
     int _priPort;
     std::string _priIp;
+    
+    std::shared_ptr<RMManager> _rmManager;
 
     void updateLastID(int);
 public:

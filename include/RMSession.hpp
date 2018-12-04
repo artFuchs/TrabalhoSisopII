@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Session.hpp"
+#include "FileManager.hpp"
 
 namespace dropbox{
 
@@ -15,21 +16,24 @@ private:
     bool _connected;
     AddressList _addresses;
     struct sockaddr_in originalAddress;
-
+    FileManager fileMgr;
+    char* username;
     std::thread signalThread;
     uint counter;
 
 public:
-    RMSession(UDPSocket& socket, bool primary, int server_id = -1) :
+    RMSession(UDPSocket& socket, bool primary, int server_id = -1, char*user = nullptr) :
         Session<true>(socket){
         _packetNum = 0;
         _id = 0; //com qual RM a sessão se comunica
         _server_id = server_id; //id do servidor atual;
         _primary = primary;
         _connected = false;
+        _packetNum = 0;
         std::cout << "RMSession created - ";
         std::cout << "primary: " << _primary << std::endl;
         originalAddress = socket.getReadingAddress();
+        username = user;
     }
 
     void stop(void){}
@@ -37,9 +41,11 @@ public:
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet); // Handles ACK
         counter++;
-        if (packet->type == PacketType::LOGIN)
+        
+        if (packet->type == PacketType::LOGIN_RM)
         {
             if (_primary){
+                std::cout << "recebi LOGIN_RM" << '\n';
                 packet->packetNum = _packetNum;
                 _id = packet->id;  // packet ID must carry the id of session
                 packet->id = _server_id;  // packet ID tells what RM sended it
@@ -58,8 +64,26 @@ public:
 
                 // sends addresses from another RMs;
                 sendAddressesList();
+
+                if (username) {
+                    std::cout << "Estou logado, deveria enviar coisas pros secundarios!" << '\n';
+                    std::shared_ptr<Packet> loginPacket(new Packet);
+                    loginPacket->type = PacketType::LOGIN;
+                    loginPacket->packetNum = _packetNum;
+                    strcpy(loginPacket->buffer,username);
+                    bool ack1 = false;
+                    while (!ack1)
+                    {
+                        std::cout << "RM sending ID " << _id << " to the secondary RM" << std::endl;;
+                        int preturn = sendMessageServer(loginPacket);
+                        ack1 = waitAck(loginPacket->packetNum);
+                    }
+                    
+                    sendAllFiles(username);
+                }
+                
             // if server is waiting for an ID
-            }else if (!_connected && _server_id < 0){
+            } else if (!_connected && _server_id < 0){
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
                 memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
                 std::cout << "RM received ID: " << _server_id << " from RM " << _id << std::endl;
@@ -110,6 +134,69 @@ public:
         {
             std::cout << "RM received ACK: " << packet->packetNum << std::endl;
         }
+        // ============
+        else if(packet->type == PacketType::DATA){
+            if (_primary){
+                bool ack = false;
+                while (!ack)
+                {
+                    int preturn = sendMessageServer(packet);
+                    ack = waitAck(packet->packetNum);
+                }
+            } else{
+                std::cout << "Data message!!!" << '\n';
+                
+                std::string file(packet->filename, packet->pathLen);
+                uint part = packet->fragmentNum;
+                uint total = packet->totalFragments;
+                double percent = 100*(((double)part+1)/(double)total);
+                std::cout << "Received: " << file << " (" << part+1 << " / " << total << ") - " << percent << "%" << std::endl;
+
+                receiveFile(packet);
+            }
+            // _supervisor->sendPacket(_sessionAddress, packet);
+            //_packetNum++;     // Should be increased when sending a message to the client
+
+        } else if(packet->type == PacketType::LOGIN) {
+            if (_primary){
+                std::cout << "primario = loguei agora!" << '\n';
+                bool ack = false;
+                while (!ack)
+                {
+                    int preturn = sendMessageServer(packet);
+                    ack = waitAck(packet->packetNum);
+                }
+                
+                sendAllFiles(packet->buffer);
+                
+            } else{
+                
+                std::cout << "Login message!!!" << '\n';
+                
+                std::string directory = std::string("./") + std::string(packet->buffer);
+                strcpy(username, packet->buffer);
+                fileMgr.check_dir(directory);
+                if (fileMgr.is_valid()) {
+
+                _packetNum++;
+                }
+                else {
+                    std::cout << "Error opening/creating the user directory " << directory << std::endl;
+                }
+        }
+            } else if (packet->type == PacketType::DELETE){
+                if (_primary){
+                    bool ack = false;
+                    while (!ack)
+                    {
+                        int preturn = sendMessageServer(packet);
+                        ack = waitAck(packet->packetNum);
+                    }
+                } else{
+                    std::cout << "delete " << packet->filename << std::endl;
+                    fileMgr.delete_file(string(packet->filename));
+                }
+      }
 
     }
 
@@ -147,7 +234,7 @@ public:
     // [nonblocking] try to send a LOGIN message to an primary RM
     void connect(int id = 0){
         std::shared_ptr<Packet> packet(new Packet);
-        packet->type = PacketType::LOGIN;
+        packet->type = PacketType::LOGIN_RM;
         packet->id = _server_id;
         packet->packetNum = 0;
         int preturn = sendMessageServer(packet);
@@ -155,7 +242,7 @@ public:
     }
 
     void keepAlive(){
-        cout << "starting keep alive" << endl;
+        std::cout << "starting keep alive" << std::endl;
         uint last_counter;
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::SIGNAL;
@@ -177,6 +264,123 @@ public:
     // Getters / Setters
     void setAddresses(AddressList addresses){
         _addresses = addresses;
+    }
+    
+    
+    // ============= ServerSession methods ===================
+    
+    std::string parsePath(char filename[FILENAME_MAX_SIZE]){
+      //check if filename init by GLOBAL_TOKEN
+      std::string path(filename);
+      if (path.find(GLOBAL_TOKEN) != std::string::npos){
+        //remove GLOBAL_TOKEN from string
+        path.erase(0,std::string(GLOBAL_TOKEN).size());
+      }
+      return path;
+    }
+
+    void receiveFile(std::shared_ptr<Packet> packet){
+      static std::string last_file;
+      static uint waited_piece = 0;
+      std::string fname = parsePath(packet->filename);
+
+      if (fname == last_file && waited_piece != packet->fragmentNum){
+        return;
+      }
+
+      if (fname != last_file)
+      {
+        last_file = fname;
+        waited_piece = 0;
+      }
+      waited_piece++;
+
+      if (waited_piece == packet->totalFragments)
+        waited_piece = 0;
+        std::cout << username << "\n";
+        std::string directory = std::string("./") + std::string(username);
+        std::cout << "DIRECTORY   "<<directory << "\n";
+        fileMgr.check_dir(directory);
+
+      if (fileMgr.is_valid()){
+        if (packet->fragmentNum == 0){
+          std::cout << "creating file " << fname << std::endl;
+          fileMgr.create_file(fname, packet->buffer, packet->bufferLen);
+        } else
+          fileMgr.append_file(fname, packet->buffer, packet->bufferLen);
+      } else{
+        std::cout << "Sync directory is invalid" << std::endl;
+      }
+    }
+    
+    bool sendFile(char filename[FILENAME_MAX_SIZE]){
+      std::string fname = parsePath(filename);
+
+      bool readFile = false;
+      char buffer[BUFFER_MAX_SIZE];
+      int currentFragment = 0;
+
+      if (!fileMgr.is_valid()){
+        std::cout << "sync directory is invalid" << std::endl;
+        return false;
+      }
+
+      map<std::string, STAT_t> files = fileMgr.read_dir();
+      if (files.find(fname)==files.end()){
+        std::cout << "No such file" << std::endl;
+        return false;
+      }
+      size_t size = files[fname].st_size;
+      double nFragments = double(size)/double(BUFFER_MAX_SIZE);
+      uint ceiledFragments = ceil(nFragments);
+
+      while(!readFile){
+        int amountRead = fileMgr.read_file(fname,buffer,BUFFER_MAX_SIZE);
+        if (amountRead > 0){
+          bool ack = false;
+          std::shared_ptr<Packet> packet(new Packet);
+          packet->type = PacketType::DATA;
+          packet->packetNum = _packetNum;
+          packet->fragmentNum = currentFragment;
+          packet->totalFragments = ceiledFragments;
+          packet->bufferLen = amountRead;
+          packet->pathLen = strlen(filename);
+          memcpy(packet->buffer, buffer, amountRead);
+          strcpy(packet->filename, filename);
+          while(!ack){
+            int preturn = sendMessageServer(packet);
+            if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+            ack = waitAck(packet->packetNum);
+          }
+          _packetNum++;
+          currentFragment++;
+        }
+        if (amountRead < BUFFER_MAX_SIZE-1) {
+          readFile = true;
+        }
+      }
+      return true;
+    }
+    
+    void sendAllFiles(char *username) {
+        std::cout << "username   " << username << "\n";
+        std::string directory = std::string("./") + std::string(username);
+        fileMgr.check_dir(directory);
+        if (fileMgr.is_valid()){
+            //send the files in the user folder
+            map<string, STAT_t> files;
+            files = fileMgr.read_dir();
+            for (auto file = files.begin(); file != files.end(); file++)
+            {
+              char fname[FILENAME_MAX_SIZE];
+              strcpy(fname,file->first.c_str());
+              sendFile(fname);
+            }
+            _packetNum++;
+        }
+        else {
+            std::cout << "Error opening/creating the user directory " << directory << std::endl;
+        }
     }
 };
 

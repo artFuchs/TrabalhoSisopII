@@ -30,6 +30,7 @@ namespace PacketType{
         EXIT,
         DOWNLOAD,
         DELETE,
+        LOGIN_RM,
         LIST,       //for the RMs, this means an AddresSListEntry
         SIGNAL      //keep alive
     };
@@ -41,6 +42,7 @@ namespace PacketType{
         "EXIT",
         "DOWNLOAD",
         "DELETE",
+        "LOGIN_RM",
         "LIST",
         "SIGNAL"
     };

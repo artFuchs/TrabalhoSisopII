@@ -6,6 +6,8 @@
 #include <cstring>
 #include <sstream>
 #include "Session.hpp"
+#include "Server.hpp"
+#include "RMManager.hpp"
 #include "SessionSupervisor.hpp"
 #include "FileManager.hpp"
 
@@ -20,6 +22,7 @@ private:
     bool _loggedIn;
     uint32_t _packetNum;
     FileManager fileMgr;
+    std::shared_ptr<RMManager> _rmManager;
     std::string _sessionAddress;
     std::shared_ptr<SessionSupervisor<ServerSession>> _supervisor;
 
@@ -32,6 +35,10 @@ public:
     }
 
     void stop(void){
+    }
+    
+    void setRMManager(std::shared_ptr<RMManager> manager) {
+        _rmManager = manager;
     }
 
     void onAnotherSessionMessage(std::shared_ptr<Packet> packet){
@@ -54,6 +61,7 @@ public:
 
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet);    // Handles ACK
+        _rmManager->onSessionReadMessage(packet);
 
         if(packet->type == PacketType::DATA){
             std::string file(packet->filename, packet->pathLen);
