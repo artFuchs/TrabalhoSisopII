@@ -293,7 +293,7 @@ public:
             last_counter = counter;
             int preturn = sendMessageServer(packet);
             if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::seconds(2));
             if (last_counter == counter){
                 std::cout << "the RM " << _id << " is probably dead." << std::endl;
                 _connected = false;
@@ -313,7 +313,7 @@ public:
         while(_connected){
             std::cout << "I am alive" << std::endl;
             last_counter = counter;
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            std::this_thread::sleep_for(std::chrono::seconds(4));
             if (last_counter == counter){
                 std::cout << "died" << std::endl;
                 alive = false;
