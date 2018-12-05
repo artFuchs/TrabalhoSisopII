@@ -12,7 +12,6 @@
 #include "RMSession.hpp"
 #include "RMManager.hpp"
 
-#include "ElectionServerSession.hpp"
 #include "ElectionManager.hpp"
 
 namespace dropbox{
@@ -53,7 +52,6 @@ private:
     AddressList _RMAdresses;
 
     ElectionManager _electionManager;
-    std::map<std::string, std::shared_ptr<ElectionServerSession>> _electionSessions;
 
     int _RMport;
     bool _primary;

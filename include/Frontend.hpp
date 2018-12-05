@@ -1,5 +1,7 @@
 #include "Socket.hpp"
 
+#include <vector>
+
 namespace dropbox{
 
     class Frontend{
@@ -12,8 +14,14 @@ namespace dropbox{
         std::string _serverAddrStr;
         bool _valid;
         std::thread _listenThread;
+        
+        bool _clientAddressValid;
+        bool _serverAddressValid;
+        std::vector<std::shared_ptr<Packet>> _pendingPacketClient;
+        std::vector<std::shared_ptr<Packet>> _pendingPacketServer;
 
-
+        void sendAck(uint32_t packetNum);
+        
     public:
         Frontend(int port);
         int getPort();

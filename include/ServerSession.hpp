@@ -93,10 +93,12 @@ public:
                 // sends a positive login message
                 // just return the packet
                 bool ack = false;
+                packet->loginServer = true;
                 while(!ack){
                   int preturn = sendMessageServer(packet);
                   if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
                   ack = waitAck(packet->packetNum);
+                  std::cout << "WAITING LOGIN ACK" << std::endl;
                 }
                 _packetNum++;
             }

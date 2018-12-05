@@ -54,6 +54,7 @@ public:
         bzero(packet->buffer, BUFFER_MAX_SIZE);
         packet->type = PacketType::LOGIN;
         packet->packetNum = _packetNum;
+        packet->loginServer = false;
         _packetNum++;
         packet->bufferLen = message.size();
         memcpy(static_cast<void*>(packet->buffer), static_cast<const void*>(message.c_str()), message.size());
