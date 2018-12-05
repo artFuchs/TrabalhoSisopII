@@ -352,7 +352,7 @@ public:
         _packetNum++;
 
         memcpy(packet->clientUsername, username.c_str(), username.size());
-        memcpy(packet->clientAddress, address, sizeof(address));
+        memcpy(&(packet->clientAddress), &address, sizeof(address));
 
         bool ack = false;
 
@@ -363,7 +363,7 @@ public:
         }
     }
 
-    void receiveClientAddress(std::string username, std::string address);
+    void receiveClientAddress(std::string username, sockaddr_in address);
 
     // ============= ServerSession methods ===================
 

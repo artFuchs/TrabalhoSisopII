@@ -256,7 +256,7 @@ void Server::onElectionWon(void){
     for(auto it : _clientAddresses){
         std::string username = it.first;
         sockaddr_in clientAddress = it.second;
-        std::string clientAddressString = std::string(std::to_string(_readingAddr.sin_addr.s_addr) + ":" + std::to_string(_readingAddr.sin_port));
+        std::string clientAddressString = std::string(std::to_string(clientAddress.sin_addr.s_addr) + ":" + std::to_string(clientAddress.sin_port));
 
         /*
         std::cout << "Sending coordinator to: " << clientAddressString << std::endl;
