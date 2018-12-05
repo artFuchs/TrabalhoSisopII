@@ -31,7 +31,7 @@ public:
         _rmSessions.push_back(session);
     }
 
-    void loggedIn(char* user){
+    void loggedIn(const char* user){
         strcpy(_user, user);
         _username = _user;
         _loggedIn = true;

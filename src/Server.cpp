@@ -100,10 +100,7 @@ void Server::run(int numberOfThreads){
 
                     newSession->setReceiverAddress(_listenSocket.getReadingAddress());
                     newSession->setRMManager(_rmManager);
-                    std::cout << "hello\n";
                     _rmManager->loggedIn(packet->buffer);
-                    std::cout << "hello1\n";
-
 
                     _serverSessions.insert(std::make_pair(clientAddress, newSession));
                     supervisor->addSession(std::make_pair(clientAddress, newSession));
@@ -255,6 +252,31 @@ void Server::receiveClientAddress(std::string username, std::string address){
 }
 void Server::onElectionWon(void){
     std::cout << "I'm the new coordinator!" << std::endl;
+
+    for(auto it : _clientAddresses){
+        std::string username = it.first;
+        std::string clientAddress = it.second;
+
+        std::cout << "Sending coordinator to: " << clientAddress << std::endl;
+        std::shared_ptr<SessionSupervisor<ServerSession>> supervisor(new SessionSupervisor<ServerSession>(username));   // Is lost if the supervisor already exists
+        auto sup = _serverSessionsByUsername.find(username);
+        if(sup != _serverSessionsByUsername.end()){
+            supervisor = sup->second;
+        } else{
+            _serverSessionsByUsername.insert(std::make_pair(username, supervisor));
+        }
+
+        std::shared_ptr<ServerSession> newSession(new ServerSession(clientAddress, _listenSocket, supervisor));
+
+        newSession->setReceiverAddress(_listenSocket.getReadingAddress());
+        newSession->setRMManager(_rmManager);
+        _rmManager->loggedIn(username.c_str());
+
+        _serverSessions.insert(std::make_pair(clientAddress, newSession));
+        supervisor->addSession(std::make_pair(clientAddress, newSession));
+
+        newSession->sendCoordinator();
+    }
 }
 
 }

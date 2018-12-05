@@ -243,6 +243,21 @@ public:
       }
     }
 
+    void sendCoordinator(){
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->packetNum = _packetNum;
+        _packetNum++;
+
+        packet->type = PacketType::COORDINATOR;
+        bool ack = false;
+        while(!ack){
+            std::cout << "SENDING COORDINATOR TO CLIENT" << std::endl;
+          int preturn = sendMessageServer(packet);
+          if(preturn < 0) std::runtime_error("Error upon sending message to server: " + std::to_string(preturn));
+          ack = waitAck(packet->packetNum);
+        }
+    }
+
 };
 
 }
