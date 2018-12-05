@@ -59,7 +59,7 @@ public:
 
         if (packet->type == PacketType::LOGIN_RM)
         {
-            if (_primary){
+            if (_primary && !_connected){
                 std::cout << "recebi LOGIN_RM" << '\n';
                 packet->packetNum = _packetNum;
                 _id = packet->id;  // packet ID must carry the id of session
