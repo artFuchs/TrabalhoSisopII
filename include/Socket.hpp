@@ -79,7 +79,7 @@ struct Packet{
     int id;
 
     char clientUsername[BUFFER_MAX_SIZE];     // Used by CLIENT_DATA
-    char clientAddress[BUFFER_MAX_SIZE];      //
+    sockaddr_in clientAddress;                //
 
     // Data itself
     char buffer[BUFFER_MAX_SIZE];

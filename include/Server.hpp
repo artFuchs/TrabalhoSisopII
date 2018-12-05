@@ -35,7 +35,7 @@ private:
     // ServerSessions organized by ServerSession
     // Only one ServerSession is stored here
     std::map<std::string, std::shared_ptr<SessionSupervisor<ServerSession>>> _serverSessionsByUsername;
-    std::vector<std::pair<std::string, std::string>> _clientAddresses;
+    std::vector<std::pair<std::string, sockaddr_in>> _clientAddresses;
     //std::mutex _ssByUsernameMutex; // Useful if we want to add another thread to receive new messages
 
     int _port;
@@ -67,8 +67,8 @@ private:
     void updateLastID(int);
 
 public:
-    void propagateClientAddress(std::string username, std::string address);
-    void receiveClientAddress(std::string username, std::string address);
+    void propagateClientAddress(std::string username, sockaddr_in address);
+    void receiveClientAddress(std::string username, sockaddr_in address);
 
 public:
     //primary server constructor

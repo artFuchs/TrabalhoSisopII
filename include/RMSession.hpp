@@ -344,7 +344,7 @@ public:
         return _id;
     }
 
-    void propagateClientAddress(std::string username, std::string address){
+    void propagateClientAddress(std::string username, sockaddr_in address){
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::CLIENT_DATA;
         packet->id = _server_id;
@@ -352,7 +352,7 @@ public:
         _packetNum++;
 
         memcpy(packet->clientUsername, username.c_str(), username.size());
-        memcpy(packet->clientAddress, address.c_str(), address.size());
+        memcpy(packet->clientAddress, address, sizeof(address));
 
         bool ack = false;
 

@@ -106,7 +106,7 @@ void Server::run(int numberOfThreads){
                     supervisor->addSession(std::make_pair(clientAddress, newSession));
                     it = _serverSessions.find(clientAddress);
 
-                    propagateClientAddress(username, clientAddress);
+                    propagateClientAddress(username, _listenSocket.getReadingAddress());
                 }
             }
 
@@ -240,13 +240,13 @@ void Server::updateLastID(int id){
       _last_id = id;
 }
 
-void Server::propagateClientAddress(std::string username, std::string address){
+void Server::propagateClientAddress(std::string username, sockaddr_in address){
     for(auto it : _RMSessions){
         it.second->propagateClientAddress(username, address);
     }
 }
 
-void Server::receiveClientAddress(std::string username, std::string address){
+void Server::receiveClientAddress(std::string username, sockaddr_in address){
     std::cout << "RM received client \"" << username << "\"'s address" << std::endl;
     _clientAddresses.push_back(std::make_pair(username, address));
 }
@@ -255,9 +255,11 @@ void Server::onElectionWon(void){
 
     for(auto it : _clientAddresses){
         std::string username = it.first;
-        std::string clientAddress = it.second;
+        sockaddr_in clientAddress = it.second;
+        std::string clientAddressString = std::string(std::to_string(_readingAddr.sin_addr.s_addr) + ":" + std::to_string(_readingAddr.sin_port));
 
-        std::cout << "Sending coordinator to: " << clientAddress << std::endl;
+        /*
+        std::cout << "Sending coordinator to: " << clientAddressString << std::endl;
         std::shared_ptr<SessionSupervisor<ServerSession>> supervisor(new SessionSupervisor<ServerSession>(username));   // Is lost if the supervisor already exists
         auto sup = _serverSessionsByUsername.find(username);
         if(sup != _serverSessionsByUsername.end()){
@@ -266,7 +268,7 @@ void Server::onElectionWon(void){
             _serverSessionsByUsername.insert(std::make_pair(username, supervisor));
         }
 
-        std::shared_ptr<ServerSession> newSession(new ServerSession(clientAddress, _listenSocket, supervisor));
+        std::shared_ptr<ServerSession> newSession(new ServerSession(clientAddressString, _listenSocket, supervisor));
 
         newSession->setReceiverAddress(_listenSocket.getReadingAddress());
         newSession->setRMManager(_rmManager);
@@ -276,6 +278,7 @@ void Server::onElectionWon(void){
         supervisor->addSession(std::make_pair(clientAddress, newSession));
 
         newSession->sendCoordinator();
+        */
     }
 }
 
