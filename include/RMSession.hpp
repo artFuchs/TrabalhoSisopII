@@ -297,6 +297,7 @@ public:
 
                 // If the primary RM fails, starts a new election
                 if(_otherPrimary){
+                    std::cout << "STARTING ELECTION" << std::endl;
                     _electionManager.election();
                 }
             }

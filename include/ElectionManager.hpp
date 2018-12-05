@@ -10,6 +10,8 @@
 
 namespace dropbox{
 
+class Server;
+
 typedef std::map<int, struct sockaddr_in> AddressList;
 
 class ElectionManager{
@@ -18,6 +20,8 @@ private:
     int& _id;
     AddressList& _addresses;
     UDPSocket& _socket;
+
+    Server& _server;
 
     bool _runningElection;
     std::thread _electionThread;
@@ -37,8 +41,8 @@ private:
                                             // just after finishing the election
 
 public:
-    ElectionManager(UDPSocket& socket, AddressList& al, int& id) :
-    _socket(socket), _addresses(al), _id(id){
+    ElectionManager(Server& server, UDPSocket& socket, AddressList& al, int& id) :
+    _server(server), _socket(socket), _addresses(al), _id(id){
         _receivedAnswer = false;
         _receivedCoordinator = false;
         _runningElection = false;
@@ -46,10 +50,10 @@ public:
         _waitAnswerTimeout = 500;
         _waitCoordinatorTimeout = 500;
         _afterElectionWaitTime = 500;
-        
+
         _electionThread = std::thread([&]{
                 while(true){
-                    // Waits until _runningElection is set to true 
+                    // Waits until _runningElection is set to true
                     while(!_runningElection);
                     bool hasWon = false;
 
@@ -180,9 +184,7 @@ public:
         return true;
     }
 
-    void onElectionWon(){
-        std::cout << "I'm the new coordinator!" << std::endl;
-    }
+    void onElectionWon();
 };
 
 };

@@ -5,7 +5,7 @@
 namespace dropbox{
 
 Server::Server(int port, int RMport) :
-    _electionManager(_listenSocketRM, _RMAdresses, _id),
+    _electionManager(*this, _listenSocketRM, _RMAdresses, _id),
     _listenSocket(port), _listenSocketRM(RMport){
     _port = port;
     _RMport = RMport;
@@ -22,7 +22,7 @@ Server::Server(int port, int RMport) :
 }
 
 Server::Server(int port, int RMport, std::string priIp, int priPort) :
-    _electionManager(_listenSocketRM, _RMAdresses, _id), _listenSocket(port),
+    _electionManager(*this, _listenSocketRM, _RMAdresses, _id), _listenSocket(port),
     _listenSocketRM(RMport), _priIp(priIp){
     _port = port;
     _RMport = RMport;
@@ -239,6 +239,10 @@ void Server::stop(void){
 void Server::updateLastID(int id){
     if (id > _last_id)
       _last_id = id;
+}
+
+void Server::onElectionWon(void){
+    std::cout << "I'm the new coordinator!" << std::endl;
 }
 
 }

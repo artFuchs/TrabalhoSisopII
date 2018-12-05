@@ -57,7 +57,7 @@ private:
     // connection with primaryServer
     int _priPort;
     std::string _priIp;
-    
+
     std::shared_ptr<RMManager> _rmManager;
 
     void updateLastID(int);
@@ -69,6 +69,8 @@ public:
 
     void run(int numberOfThreads = 4);
     void stop(void);
+
+    void onElectionWon();
 };
 
 }
