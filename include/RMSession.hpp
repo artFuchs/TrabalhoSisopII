@@ -1,11 +1,10 @@
 #pragma once
 
 #include "Session.hpp"
+#include "ElectionManager.hpp"
 #include "FileManager.hpp"
 
 namespace dropbox{
-
-typedef std::map<int, struct sockaddr_in> AddressList;
 
 class RMSession : public Session<true>{
 private:
@@ -13,9 +12,12 @@ private:
     int _server_id;
     int _id;
     bool _primary;
+    bool _otherPrimary;
     bool _connected;
     AddressList _addresses;
     struct sockaddr_in originalAddress;
+
+    bool _signalRunning;
     FileManager fileMgr;
     char* username = nullptr;
     char user[BUFFER_MAX_SIZE];
@@ -23,15 +25,18 @@ private:
     uint counter;
     bool alive;
 
+    ElectionManager& _electionManager;
 
 public:
-    RMSession(UDPSocket& socket, bool primary, int server_id = -1, char*user = nullptr) :
-        Session<true>(socket){
+    RMSession(ElectionManager& em, UDPSocket& socket, bool primary, int server_id = -1, char*user = nullptr) :
+        Session<true>(socket), _electionManager(em){
         _packetNum = 0;
         _id = 0; //com qual RM a sessão se comunica
         _server_id = server_id; //id do servidor atual;
         _primary = primary;
+        _otherPrimary = false;
         _connected = false;
+        _signalRunning = false;
         _packetNum = 0;
         std::cout << "RMSession created - ";
         std::cout << "primary: " << _primary << std::endl;
@@ -45,6 +50,11 @@ public:
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet); // Handles ACK
         counter++;
+
+        if(!_signalRunning){
+            signalThread = std::thread(&RMSession::keepAlive,this);
+            _signalRunning = true;
+        }
 
         if (packet->type == PacketType::LOGIN_RM)
         {
@@ -96,7 +106,6 @@ public:
                 memcpy(&_server_id, packet->buffer, sizeof(_id)); // this server ID
                 std::cout << "RM received ID: " << _server_id << " from RM " << _id << std::endl;
                 _connected = true;
-                signalThread = std::thread(&RMSession::keepAlive,this);
             // if server has already an ID, smaller than the connecting server
             }else if (!_connected && _server_id < packet->id){ //
                 _id = packet->id; // ID of the RM that this RMSession is communicating with
@@ -137,6 +146,20 @@ public:
             setReceiverAddress(address);
             connect(id);
             setReceiverAddress(originalAddress);
+            _otherPrimary = true;
+        }
+        else if (packet->type == PacketType::ELECTION)
+        {
+            _electionManager.onElection(packet);
+        }
+        else if (packet->type == PacketType::ANSWER)
+        {
+            _electionManager.onAnswer(packet);
+        }
+        else if (packet->type == PacketType::COORDINATOR)
+        {
+            _electionManager.onCoordinator(packet);
+            _otherPrimary = true;
         }
         else if (packet->type == PacketType::ACK)
         {
@@ -229,6 +252,7 @@ public:
 
             memcpy(packet->buffer, &id, sizeof(id));
             memcpy(packet->buffer+sizeof(id), &address, sizeof(address));
+            packet->packetNum = _packetNum;
             packet->bufferLen = sizeof(id) + sizeof(address);
             std::string address_str = std::to_string(address.sin_addr.s_addr) + ":" + std::to_string(address.sin_port);
             std::cout << "sending {ID: " << id << ", ADDRESS: " << address_str <<  "}" << std::endl;
@@ -236,7 +260,7 @@ public:
                 int preturn = sendMessageServer(packet);
                 if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
                 ack = waitAck(_packetNum);
-            }
+        }
             _packetNum++;
         }
 
@@ -268,6 +292,11 @@ public:
             if (last_counter == counter){
                 std::cout << "the RM " << _id << " is probably dead." << std::endl;
                 _connected = false;
+
+                // If the primary RM fails, starts a new election
+                if(_otherPrimary){
+                    _electionManager.election();
+                }
             }
         }
     }

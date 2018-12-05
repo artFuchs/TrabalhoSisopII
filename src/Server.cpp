@@ -5,6 +5,7 @@
 namespace dropbox{
 
 Server::Server(int port, int RMport) :
+    _electionManager(_listenSocketRM, _RMAdresses, _id),
     _listenSocket(port), _listenSocketRM(RMport){
     _port = port;
     _RMport = RMport;
@@ -21,7 +22,8 @@ Server::Server(int port, int RMport) :
 }
 
 Server::Server(int port, int RMport, std::string priIp, int priPort) :
-    _listenSocket(port), _listenSocketRM(RMport), _priIp(priIp){
+    _electionManager(_listenSocketRM, _RMAdresses, _id), _listenSocket(port),
+    _listenSocketRM(RMport), _priIp(priIp){
     _port = port;
     _RMport = RMport;
     _priPort = priPort;
@@ -175,8 +177,7 @@ void Server::run(int numberOfThreads){
                     packet->id = _last_id+1;
                 }
                 // create RMSession
-
-                std::shared_ptr<RMSession> newSession(new RMSession(_listenSocketRM, _primary, _id, _rmManager->getUsername()));
+                std::shared_ptr<RMSession> newSession(new RMSession(_electionManager, _listenSocketRM, _primary, _id, _rmManager->getUsername()));
 
                 newSession->setAddresses(_RMAdresses);
                 newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
@@ -214,7 +215,7 @@ void Server::run(int numberOfThreads){
     if (!_primary){
         // creates a temporary socket just to send the LOGIN message
         UDPSocket tmpSocket(_priIp.data(),_priPort);
-        RMSession tmpSession(_listenSocketRM, false);
+        RMSession tmpSession(_electionManager, _listenSocketRM, false);
         tmpSession.setReceiverAddress(tmpSocket.getReadingAddress());
         // try sending the message until have an ID
         while (_id < 0){
