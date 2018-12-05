@@ -222,7 +222,7 @@ void Server::run(int numberOfThreads){
         while (_id < 0){
             std::cout << "trying to connect..." << std::endl;
             tmpSession.connect();
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 }
