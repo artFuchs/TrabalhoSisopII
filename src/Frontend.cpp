@@ -24,7 +24,7 @@ namespace dropbox{
         _serverAddressValid = true;
         _serverAddr = tmpSocket.getReadingAddress();
         _serverAddrStr = tmpSocket.getClientAddressString();
-        
+
         for(auto p : _pendingPacketServer){
             _socket.send(p, &_serverAddr);
         }
@@ -34,7 +34,7 @@ namespace dropbox{
         while (_valid){
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _socket.read();
-            std::cout << "FRONTEND recebeu mensagem : " << std::endl;
+            //std::cout << "FRONTEND recebeu mensagem : " << std::endl;
             // Checks if there was an error upon reading the next packet
             if(packet->bufferLen < 0){
                 std::cout << "FRONTEND: Error while trying to read from socket" << std::endl;
@@ -48,12 +48,12 @@ namespace dropbox{
                     _serverAddrStr = _socket.getClientAddressString();
                 } else if(packet->type == PacketType::LOGIN){
                     std::cout << "Received login!" << std::endl;
-                    
+
                     if(packet->loginServer){
                         _serverAddressValid = true;
                         _serverAddr = _socket.getReadingAddress();
                         _serverAddrStr = _socket.getClientAddressString();
-                        
+
                         for(auto p : _pendingPacketServer){
                             _socket.send(p, &_serverAddr);
                         }
@@ -85,14 +85,14 @@ namespace dropbox{
             }
         }
     }
-    
+
     void Frontend::sendAck(uint32_t packetNum){
         std::shared_ptr<Packet> newPacket(new Packet);
         sockaddr_in address = _socket.getReadingAddress();
 
         newPacket->type = PacketType::ACK;
         newPacket->packetNum = packetNum;
-        
+
         _socket.send(newPacket, &address);
     }
 

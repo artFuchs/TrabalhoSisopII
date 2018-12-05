@@ -34,6 +34,8 @@ private:
     ElectionManager& _electionManager;
     Server& _server;
 
+    std::mutex _modifying_dir;
+
 public:
     RMSession(Server& server, ElectionManager& em, UDPSocket& socket, bool primary, int server_id = -1, char*user = nullptr) :
         _server(server),
@@ -46,8 +48,6 @@ public:
         _connected = false;
         _signalRunning = false;
         _packetNum = 0;
-        std::cout << "RMSession created - ";
-        std::cout << "primary: " << _primary << std::endl;
         originalAddress = socket.getReadingAddress();
         username = user;
         alive = true;
@@ -67,7 +67,7 @@ public:
         if (packet->type == PacketType::LOGIN_RM)
         {
             if (_primary){
-                std::cout << "recebi LOGIN_RM" << '\n';
+                std::cout << "received LOGIN request." << '\n';
                 packet->packetNum = _packetNum;
                 _id = packet->id;  // packet ID must carry the id of session
                 packet->id = _server_id;  // packet ID tells what RM sended it
@@ -86,11 +86,8 @@ public:
 
                 // sends addresses from another RMs;
                 sendAddressesList();
-                if (username == nullptr)
-                  std::cout << "NULLPTR\n";
-
                 if (username) {
-                    std::cout << "Estou logado, deveria enviar coisas pros secundarios!" << '\n';
+                    std::cout << "synchyng files with secondary RMs" << '\n';
                     std::shared_ptr<Packet> loginPacket(new Packet);
                     loginPacket->type = PacketType::LOGIN;
                     loginPacket->packetNum = _packetNum;
@@ -125,7 +122,7 @@ public:
                 bool ack = false;
                 while (!ack)
                 {
-                    std::cout << "RM sending ID " << _id << " to the secondary RM" << std::endl;;
+                    std::cout << "RM sending ID " << _id << " to the secondary RM." << std::endl;;
                     int preturn = sendMessageServer(packet);
                     ack = waitAck(packet->packetNum);
                 }
@@ -137,8 +134,7 @@ public:
                 _connected = true;
             }
             else{
-                std::cout << "Strange... this session is already connected... but just sent a LOGIN request..." << std::endl;
-                std::cout << "This is a work to Sherlock Holmes." << std::endl;
+                std::cout << "RM already connected." << std::endl;
             }
 
         }
@@ -172,7 +168,7 @@ public:
         }
         else if (packet->type == PacketType::ACK)
         {
-            std::cout << "RM received ACK: " << packet->packetNum << std::endl;
+            //std::cout << "RM received ACK: " << packet->packetNum << std::endl;
         }
         else if (packet->type == PacketType::SIGNAL && _primary)
         {
@@ -192,8 +188,6 @@ public:
                     ack = waitAck(packet->packetNum);
                 }
             } else{
-                std::cout << "Data message!!!" << '\n';
-
                 std::string file(packet->filename, packet->pathLen);
                 uint part = packet->fragmentNum;
                 uint total = packet->totalFragments;
@@ -202,9 +196,6 @@ public:
 
                 receiveFile(packet);
             }
-            // _supervisor->sendPacket(_sessionAddress, packet);
-            //_packetNum++;     // Should be increased when sending a message to the client
-
         } else if(packet->type == PacketType::LOGIN) {
             if (_primary){
                 std::cout << "primario = loguei agora!" << '\n';
@@ -291,7 +282,6 @@ public:
     }
 
     void keepAlive(){
-        std::cout << "starting keep alive" << std::endl;
         uint last_counter;
         std::shared_ptr<Packet> packet(new Packet);
         packet->type = PacketType::SIGNAL;
@@ -301,9 +291,9 @@ public:
             last_counter = counter;
             int preturn = sendMessageServer(packet);
             if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::seconds(2));
             if (last_counter == counter){
-                std::cout << "the RM " << _id << " is probably dead." << std::endl;
+                std::cout << "the RM " << _id << " is probably down." << std::endl;
                 _connected = false;
 
                 // If the primary RM fails, starts a new election
@@ -317,13 +307,11 @@ public:
 
     void dieSlowly(){
         uint last_counter;
-        std::cout << "dying slowly" << std::endl;
         while(_connected){
-            std::cout << "I am alive" << std::endl;
             last_counter = counter;
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            std::this_thread::sleep_for(std::chrono::seconds(5));
             if (last_counter == counter){
-                std::cout << "died" << std::endl;
+                std::cout << "the RM " << _id << " is prossibly down." << std::endl;
                 alive = false;
                 break;
             }
@@ -378,6 +366,9 @@ public:
     }
 
     void receiveFile(std::shared_ptr<Packet> packet){
+
+      std::lock_guard<std::mutex> lck(_modifying_dir);
+
       static std::string last_file;
       static uint waited_piece = 0;
       std::string fname = parsePath(packet->filename);

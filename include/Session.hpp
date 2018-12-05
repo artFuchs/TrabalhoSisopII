@@ -54,7 +54,7 @@ protected:
     int sendMessageClient(std::shared_ptr<Packet> packet){
         return _socket.send(packet);
     }
-    
+
     int sendMessageElectionSession(std::shared_ptr<Packet> packet, sockaddr_in* address){
         return _socket.send(packet);
     }
@@ -78,7 +78,6 @@ public:
             ackPacket->type = PacketType::ACK;
             ackPacket->packetNum = packet->packetNum;
             if(isServer){
-                std::cout << "sending ACK" << std::endl;
                 sendMessageServer(ackPacket);
             } else{
                 sendMessageClient(ackPacket);

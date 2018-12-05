@@ -73,8 +73,8 @@ void Server::run(int numberOfThreads){
             // Receiving a new message
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _listenSocket.read();
-            
-            std::cout << "NEW MESSAGE" << std::endl;
+
+            //std::cout << "NEW MESSAGE" << std::endl;
 
             // If there was a problem while reading, it shuts down the connection
             if(packet->bufferLen < 0){
@@ -155,7 +155,7 @@ void Server::run(int numberOfThreads){
             *packet = _listenSocketRM.read();
             bool isLogin = packet->type == PacketType::LOGIN_RM;
 
-            std::cout << "SERVER received: " << PacketType::str[packet->type] << std::endl;
+            //std::cout << "SERVER received: " << PacketType::str[packet->type] << std::endl;
 
             std::string clientAddress = _listenSocketRM.getClientAddressString();
 
@@ -183,7 +183,7 @@ void Server::run(int numberOfThreads){
                 newSession->setAddresses(_RMAdresses);
                 newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
 
-                cout << "Criei um novo RMSESSION" << endl;
+                //cout << "Criei um novo RMSESSION" << endl;
 
                 // get id if still don't have one
                 if (_id < 0 and packet->bufferLen > 0){
@@ -198,7 +198,7 @@ void Server::run(int numberOfThreads){
 
                     _rmManager->addRMSession(newSession);
 
-                    cout << "SALVEI A RMSESSION NO MAP" << endl;
+                    //cout << "SALVEI A RMSESSION NO MAP" << endl;
                     updateLastID(packet->id);
                     it = _RMSessions.find(clientAddress);
                 }
@@ -222,7 +222,7 @@ void Server::run(int numberOfThreads){
         while (_id < 0){
             std::cout << "trying to connect..." << std::endl;
             tmpSession.connect();
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 }
