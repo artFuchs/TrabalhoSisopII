@@ -35,10 +35,9 @@ namespace dropbox{
             } else{
 
                 if (packet->type == PacketType::COORDINATOR){
-                    _serverAddr = socket.readingAddr();
-                    _serverAddrStr = socket.getClientAddressString();
+                    _serverAddr = _socket.readingAddr();
+                    _serverAddrStr = _socket.getClientAddressString();
                 }
-
 
                 if (packet->type == PacketType::LOGIN){
                     if (_clientAddrStr == ""){
