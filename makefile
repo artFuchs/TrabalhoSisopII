@@ -12,7 +12,7 @@ INCLUDE_FLAG=-I./include
 
 ALL_OBJS=${wildcard ${BIN_DIR}/*.o}
 
-SERVER_OBJS=${BIN_DIR}/mainServer.o ${BIN_DIR}/server.o ${BIN_DIR}/fileManager.o ${BIN_DIR}/electionManager.o
+SERVER_OBJS=${BIN_DIR}/mainServer.o ${BIN_DIR}/server.o ${BIN_DIR}/fileManager.o ${BIN_DIR}/electionManager.o ${BIN_DIR}/RMSession.o
 CLIENT_OBJS=${BIN_DIR}/mainClient.o ${BIN_DIR}/client.o ${BIN_DIR}/fileMonitor.o ${BIN_DIR}/fileManager.o ${BIN_DIR}/frontend.o
 
 #############################################################
@@ -65,5 +65,8 @@ ${BIN_DIR}/frontend.o: ${SRC_DIR}/Frontend.cpp
 	
 ${BIN_DIR}/electionManager.o: ${SRC_DIR}/ElectionManager.cpp
 	g++ -c ${SRC_DIR}/ElectionManager.cpp -o ${BIN_DIR}/electionManager.o ${CXXFLAGS} ${INCLUDE_FLAG}
+
+${BIN_DIR}/RMSession.o: ${SRC_DIR}/RMSession.cpp
+	g++ -c ${SRC_DIR}/RMSession.cpp -o ${BIN_DIR}/RMSession.o ${CXXFLAGS} ${INCLUDE_FLAG}
 
 #############################################################

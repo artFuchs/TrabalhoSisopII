@@ -35,7 +35,8 @@ namespace PacketType{
         SIGNAL,      //keep alive
         ELECTION,
         ANSWER,
-        COORDINATOR
+        COORDINATOR,
+        CLIENT_DATA
     };
 
     static constexpr const char* str[] = {
@@ -50,7 +51,8 @@ namespace PacketType{
         "SIGNAL",
         "ELECTION",
         "ANSWER",
-        "COORDINATOR"
+        "COORDINATOR",
+        "CLIENT_DATA"
     };
 
 }
@@ -75,6 +77,9 @@ struct Packet{
     uint16_t pathLen;
     // used by Replica Managers only: sender id
     int id;
+
+    char clientUsername[BUFFER_MAX_SIZE];     // Used by CLIENT_DATA
+    char clientAddress[BUFFER_MAX_SIZE];      //
 
     // Data itself
     char buffer[BUFFER_MAX_SIZE];

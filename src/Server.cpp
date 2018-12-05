@@ -108,6 +108,8 @@ void Server::run(int numberOfThreads){
                     _serverSessions.insert(std::make_pair(clientAddress, newSession));
                     supervisor->addSession(std::make_pair(clientAddress, newSession));
                     it = _serverSessions.find(clientAddress);
+
+                    propagateClientAddress(username, clientAddress);
                 }
             }
 
@@ -177,7 +179,7 @@ void Server::run(int numberOfThreads){
                     packet->id = _last_id+1;
                 }
                 // create RMSession
-                std::shared_ptr<RMSession> newSession(new RMSession(_electionManager, _listenSocketRM, _primary, _id, _rmManager->getUsername()));
+                std::shared_ptr<RMSession> newSession(new RMSession(*this, _electionManager, _listenSocketRM, _primary, _id, _rmManager->getUsername()));
 
                 newSession->setAddresses(_RMAdresses);
                 newSession->setReceiverAddress(_listenSocketRM.getReadingAddress());
@@ -215,7 +217,7 @@ void Server::run(int numberOfThreads){
     if (!_primary){
         // creates a temporary socket just to send the LOGIN message
         UDPSocket tmpSocket(_priIp.data(),_priPort);
-        RMSession tmpSession(_electionManager, _listenSocketRM, false);
+        RMSession tmpSession(*this, _electionManager, _listenSocketRM, false);
         tmpSession.setReceiverAddress(tmpSocket.getReadingAddress());
         // try sending the message until have an ID
         while (_id < 0){
@@ -241,6 +243,16 @@ void Server::updateLastID(int id){
       _last_id = id;
 }
 
+void Server::propagateClientAddress(std::string username, std::string address){
+    for(auto it : _RMSessions){
+        it.second->propagateClientAddress(username, address);
+    }
+}
+
+void Server::receiveClientAddress(std::string username, std::string address){
+    std::cout << "RM received client \"" << username << "\"'s address" << std::endl;
+    _clientAddresses.push_back(std::make_pair(username, address));
+}
 void Server::onElectionWon(void){
     std::cout << "I'm the new coordinator!" << std::endl;
 }

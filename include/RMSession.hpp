@@ -4,11 +4,16 @@
 #include "ElectionManager.hpp"
 #include "FileManager.hpp"
 
+#include <atomic>
+#include <cmath>
+
 namespace dropbox{
+
+class Server;
 
 class RMSession : public Session<true>{
 private:
-    uint32_t _packetNum;
+    std::atomic<uint32_t> _packetNum;
     int _server_id;
     int _id;
     bool _primary;
@@ -27,9 +32,11 @@ private:
     bool alive;
 
     ElectionManager& _electionManager;
+    Server& _server;
 
 public:
-    RMSession(ElectionManager& em, UDPSocket& socket, bool primary, int server_id = -1, char*user = nullptr) :
+    RMSession(Server& server, ElectionManager& em, UDPSocket& socket, bool primary, int server_id = -1, char*user = nullptr) :
+        _server(server),
         Session<true>(socket), _electionManager(em){
         _packetNum = 0;
         _id = 0; //com qual RM a sessão se comunica
@@ -170,6 +177,10 @@ public:
         else if (packet->type == PacketType::SIGNAL && _primary)
         {
             counter++;
+        }
+        else if (packet->type == PacketType::CLIENT_DATA)
+        {
+            receiveClientAddress(packet->clientUsername, packet->clientAddress);
         }
         // ============
         else if(packet->type == PacketType::DATA){
@@ -332,6 +343,27 @@ public:
     int getID(){
         return _id;
     }
+
+    void propagateClientAddress(std::string username, std::string address){
+        std::shared_ptr<Packet> packet(new Packet);
+        packet->type = PacketType::CLIENT_DATA;
+        packet->id = _server_id;
+        packet->packetNum = _packetNum;
+        _packetNum++;
+
+        memcpy(packet->clientUsername, username.c_str(), username.size());
+        memcpy(packet->clientAddress, address.c_str(), address.size());
+
+        bool ack = false;
+
+        while(!ack){
+            int preturn = sendMessageServer(packet);
+            if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
+            ack = waitAck(packet->packetNum);
+        }
+    }
+
+    void receiveClientAddress(std::string username, std::string address);
 
     // ============= ServerSession methods ===================
 
