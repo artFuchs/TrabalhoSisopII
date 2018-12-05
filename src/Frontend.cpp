@@ -27,12 +27,19 @@ namespace dropbox{
         while (_valid){
             std::shared_ptr<Packet> packet(new Packet);
             *packet = _socket.read();
-            std::cout << "FRONTEND recebeu mensagem" << std::endl;
+            std::cout << "FRONTEND recebeu mensagem : " << std::endl;
             // Checks if there was an error upon reading the next packet
             if(packet->bufferLen < 0){
                 std::cout << "FRONTEND: Error while trying to read from socket" << std::endl;
                 break;
             } else{
+
+                if (packet->type == PacketType::COORDINATOR){
+                    _serverAddr = socket.readingAddr();
+                    _serverAddrStr = socket.getClientAddressString();
+                }
+
+
                 if (packet->type == PacketType::LOGIN){
                     if (_clientAddrStr == ""){
                         _clientAddrStr = _socket.getClientAddressString();
