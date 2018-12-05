@@ -60,11 +60,10 @@ public:
 
         if (packet->type == PacketType::LOGIN_RM)
         {
-            {
-                std::lock_guard<std::mutex> lck(_loginMutex);
-            }
-            
+            std::lock_guard<std::mutex> lck(_loginMutex);
+
             if (_primary && !_connected){
+                _connected = true;
                 std::cout << "RM recebi LOGIN_RM" << '\n';
                 packet->packetNum = _packetNum;
                 _id = packet->id;  // packet ID must carry the id of session
@@ -104,6 +103,7 @@ public:
                     sendAllFiles(username);
                 }
                 _connected = true;
+
                 //dieslowlyThread = std::thread(&RMSession::dieSlowly, this);
                 //_signalRunning = true;
 
