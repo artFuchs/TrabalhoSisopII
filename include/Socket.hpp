@@ -214,6 +214,10 @@ public:
     sockaddr_in& getReadingAddress(void){
         return _readingAddr;
     }
+
+    bool isValid(){
+        return _valid;
+    }
 };
 
 }

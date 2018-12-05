@@ -2,20 +2,34 @@
 #include <string>
 
 #include "Client.hpp"
+#include "Frontend.hpp"
+
+#define PORT 3999;
 
 int main(int argc, char* argv[]){
 
-    if (argc != 4){
+    if (argc < 4){
       std::cout << "USO: " << std::endl;
-      std::cout << "./client <username> <server ip adress> <port>" << std::endl;
+      std::cout << "./client <username> <server ip adress> <port> [<frontendPort>]" << std::endl;
+      std::cout << "frontendPort pode ser necessário caso esteja rodando mais do que um cliente" << std::endl;
       return 0;
     }
 
-    int port = std::stoi(argv[3]);
+    int port = PORT;
+    if (argc == 5)
+        port = std::stoi(argv[4]);
+    dropbox::Frontend frontend(port);
+    port = frontend.getPort();
+    if (port < 0)
+        std::cout << "Frontend socket not valid" << std::endl;
+    int frontPort = std::stoi(argv[3]);
+    frontend.setServerAddress(argv[2], frontPort);
+    std::cout << "FRONTEND criado com port:" << port << std::endl;
 
-    dropbox::Client client(argv[1], argv[2], port);
+
+    dropbox::Client client(argv[1], "localhost", port);
+
     std::string cstr;
-
     char *token;
     char *arg;
 
