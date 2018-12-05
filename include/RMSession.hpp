@@ -22,7 +22,7 @@ private:
     char* username = nullptr;
     char user[BUFFER_MAX_SIZE];
     std::thread signalThread;
-    //std::thread dieslowlyThread;
+    std::thread dieslowlyThread;
     uint counter;
     bool alive;
 
@@ -53,17 +53,16 @@ public:
         Session<true>::onSessionReadMessage(packet); // Handles ACK
         counter++;
 
-        /*if(!_signalRunning){
+        if(!_signalRunning){
             signalThread = std::thread(&RMSession::keepAlive,this);
             _signalRunning = true;
-        }*/
+        }
 
         if (packet->type == PacketType::LOGIN_RM)
         {
             std::lock_guard<std::mutex> lck(_loginMutex);
 
             if (_primary && !_connected){
-                _connected = true;
                 std::cout << "RM recebi LOGIN_RM" << '\n';
                 packet->packetNum = _packetNum;
                 _id = packet->id;  // packet ID must carry the id of session
@@ -104,8 +103,8 @@ public:
                 }
                 _connected = true;
 
-                //dieslowlyThread = std::thread(&RMSession::dieSlowly, this);
-                //_signalRunning = true;
+                dieslowlyThread = std::thread(&RMSession::dieSlowly, this);
+                _signalRunning = true;
 
             // if server is waiting for an ID
             } else if (!_connected && _server_id < 0){
