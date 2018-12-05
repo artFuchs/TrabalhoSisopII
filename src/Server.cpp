@@ -258,8 +258,12 @@ void Server::onElectionWon(void){
         sockaddr_in clientAddress = it.second;
         std::string clientAddressString = std::string(std::to_string(clientAddress.sin_addr.s_addr) + ":" + std::to_string(clientAddress.sin_port));
 
-        /*
         std::cout << "Sending coordinator to: " << clientAddressString << std::endl;
+
+        std::shared_ptr<ElectionServerSession> newSession(new ElectionServerSession(clientAddress));
+        _electionSessions.insert(std::make_pair(clientAddressString, newSession));
+
+        /*
         std::shared_ptr<SessionSupervisor<ServerSession>> supervisor(new SessionSupervisor<ServerSession>(username));   // Is lost if the supervisor already exists
         auto sup = _serverSessionsByUsername.find(username);
         if(sup != _serverSessionsByUsername.end()){

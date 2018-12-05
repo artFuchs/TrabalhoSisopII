@@ -146,6 +146,16 @@ public:
         _valid = true;
     }
 
+    //Establishes connection with a client, used by ElectionServerSession
+    UDPSocket(struct sockaddr_in address){
+        _sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+        if(_sockfd < 0){
+            throw std::runtime_error("Error upon trying to initialize the socket");
+        }
+        _readingAddr = address;
+        _valid = true;
+    }
+
     ~UDPSocket(void){
     }
 
