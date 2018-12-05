@@ -26,6 +26,7 @@ private:
     uint counter;
     bool alive;
 
+    std::mutex _loginMutex;
     ElectionManager& _electionManager;
 
 public:
@@ -59,8 +60,10 @@ public:
 
         if (packet->type == PacketType::LOGIN_RM)
         {
+            std::lock_guard<std::mutex> lck(_loginMutex);
+
             if (_primary && !_connected){
-                std::cout << "recebi LOGIN_RM" << '\n';
+                std::cout << "RM recebi LOGIN_RM" << '\n';
                 packet->packetNum = _packetNum;
                 _id = packet->id;  // packet ID must carry the id of session
                 packet->id = _server_id;  // packet ID tells what RM sended it
@@ -133,7 +136,6 @@ public:
                 std::cout << "Strange... this session is already connected... but just sent a LOGIN request..." << std::endl;
                 std::cout << "This is a work to Sherlock Holmes." << std::endl;
             }
-
         }
         else if (packet->type == PacketType::LIST)
         {
