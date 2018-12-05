@@ -175,6 +175,7 @@ void Server::run(int numberOfThreads){
                 // generate a new ID
                 if (_primary){
                     packet->id = _last_id+1;
+                    std::cout << "last_id = " << _last_id << std::endl;
                 }
                 // create RMSession
                 std::shared_ptr<RMSession> newSession(new RMSession(_electionManager, _listenSocketRM, _primary, _id, _rmManager->getUsername()));
