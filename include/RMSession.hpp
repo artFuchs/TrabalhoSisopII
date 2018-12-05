@@ -60,8 +60,10 @@ public:
 
         if (packet->type == PacketType::LOGIN_RM)
         {
-            std::lock_guard<std::mutex> lck(_loginMutex);
-
+            {
+                std::lock_guard<std::mutex> lck(_loginMutex);
+            }
+            
             if (_primary && !_connected){
                 std::cout << "RM recebi LOGIN_RM" << '\n';
                 packet->packetNum = _packetNum;
