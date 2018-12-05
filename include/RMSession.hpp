@@ -42,12 +42,12 @@ public:
     void onSessionReadMessage(std::shared_ptr<Packet> packet){
         Session<true>::onSessionReadMessage(packet); // Handles ACK
         counter++;
-        
+
         if(!_signalRunning){
             signalThread = std::thread(&RMSession::keepAlive,this);
             _signalRunning = true;
         }
-        
+
         if (packet->type == PacketType::LOGIN)
         {
             if (_primary){
@@ -154,6 +154,7 @@ public:
 
             memcpy(packet->buffer, &id, sizeof(id));
             memcpy(packet->buffer+sizeof(id), &address, sizeof(address));
+            packet->packetNum = _packetNum;
             packet->bufferLen = sizeof(id) + sizeof(address);
             std::string address_str = std::to_string(address.sin_addr.s_addr) + ":" + std::to_string(address.sin_port);
             std::cout << "sending {ID: " << id << ", ADDRESS: " << address_str <<  "}" << std::endl;
@@ -161,7 +162,7 @@ public:
                 int preturn = sendMessageServer(packet);
                 if(preturn < 0) std::runtime_error("Error upon sending message to client: " + std::to_string(preturn));
                 ack = waitAck(_packetNum);
-            }
+        }
             _packetNum++;
         }
 
