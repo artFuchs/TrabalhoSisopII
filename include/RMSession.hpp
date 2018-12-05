@@ -22,7 +22,7 @@ private:
     char* username = nullptr;
     char user[BUFFER_MAX_SIZE];
     std::thread signalThread;
-    std::thread dieslowlyThread;
+    //std::thread dieslowlyThread;
     uint counter;
     bool alive;
 
@@ -52,10 +52,10 @@ public:
         Session<true>::onSessionReadMessage(packet); // Handles ACK
         counter++;
 
-        if(!_signalRunning){
+        /*if(!_signalRunning){
             signalThread = std::thread(&RMSession::keepAlive,this);
             _signalRunning = true;
-        }
+        }*/
 
         if (packet->type == PacketType::LOGIN_RM)
         {
@@ -99,8 +99,8 @@ public:
                     sendAllFiles(username);
                 }
                 _connected = true;
-                dieslowlyThread = std::thread(&RMSession::dieSlowly, this);
-                _signalRunning = true;
+                //dieslowlyThread = std::thread(&RMSession::dieSlowly, this);
+                //_signalRunning = true;
 
             // if server is waiting for an ID
             } else if (!_connected && _server_id < 0){

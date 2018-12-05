@@ -158,14 +158,14 @@ void Server::run(int numberOfThreads){
 
             std::string clientAddress = _listenSocketRM.getClientAddressString();
 
-            for (auto it = _RMSessions.begin(); it != _RMSessions.end(); it++)
+            /*for (auto it = _RMSessions.begin(); it != _RMSessions.end(); it++)
             {
                 if (!(it->second->isAlive())){
                     auto entry = _RMAdresses.find(it->second->getID());
                     _RMAdresses.erase(entry);
                     _RMSessions.erase(it);
                 }
-            }
+            }*/
 
             auto it = _RMSessions.find(clientAddress);
 
