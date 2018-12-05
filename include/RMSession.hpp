@@ -22,6 +22,7 @@ private:
     char* username = nullptr;
     char user[BUFFER_MAX_SIZE];
     std::thread signalThread;
+    std::thread dieslowlyThread;
     uint counter;
     bool alive;
 
@@ -98,7 +99,8 @@ public:
                     sendAllFiles(username);
                 }
                 _connected = true;
-                signalThread = std::thread(&RMSession::dieSlowly, this);
+                dieslowlyThread = std::thread(&RMSession::dieSlowly, this);
+                _signalRunning = true;
 
             // if server is waiting for an ID
             } else if (!_connected && _server_id < 0){
