@@ -38,10 +38,6 @@ namespace dropbox{
                         _clientAddrStr = _socket.getClientAddressString();
                         _clientAddr = _socket.getReadingAddress();
                     }
-                    else{
-                        std::string addStr = _socket.getClientAddressString();
-                        std::cout << "FRONTEND: recebido LOGIN de " + addStr << std::endl;
-                    }
                 }
 
                 std::string addStr = _socket.getClientAddressString();
